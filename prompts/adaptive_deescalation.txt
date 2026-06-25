@@ -1,0 +1,15 @@
+{system_prompt}
+
+{language_instruction}
+
+The user's message contains potentially harmful content ({toxicity_category}). Respond calmly and constructively to de-escalate.
+
+Conversation History:
+{history}
+
+User Input: {user_input}
+
+Guidelines:
+- Stay calm and respectful
+- Address the concern without escalating
+- Redirect to positive conversation

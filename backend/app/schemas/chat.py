@@ -40,5 +40,22 @@ class FeedbackRequest(BaseModel):
     comment: Optional[str] = None
 
 
+class AnalyzeRequest(BaseModel):
+    message: str = Field(..., min_length=1, max_length=2000, description="User input message")
+    language: Optional[str] = Field(default="auto", description="Language code or 'auto' for detection")
+    history: Optional[List[dict]] = Field(default_factory=list, description="Previous chat messages")
+
+
+class AnalyzeResponse(BaseModel):
+    language: str
+    sentiment: str
+    emotion: str
+    toxicity: str
+    threat: str
+    intent: str
+    confidence: dict
+    response: str
+
+
 class HealthResponse(BaseModel):
     status: str

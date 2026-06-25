@@ -7,6 +7,8 @@ from ..schemas.chat import (
     LanguageRequest,
     LanguageResponse,
     FeedbackRequest,
+    AnalyzeRequest,
+    AnalyzeResponse,
     HealthResponse,
 )
 from ..services import get_services
@@ -70,3 +72,20 @@ async def health_endpoint():
 @router.post("/feedback")
 async def feedback_endpoint(request: FeedbackRequest):
     return {"status": "received", "message_id": request.message_id, "rating": request.rating}
+
+
+@router.post("/analyze", response_model=AnalyzeResponse)
+async def analyze_endpoint(request: AnalyzeRequest):
+    services = get_services()
+
+    message = request.message.strip()
+    if not message:
+        raise HTTPException(status_code=400, detail="Message cannot be empty")
+
+    result = services["pipeline"].analyze(
+        text=message,
+        language=request.language,
+        history=request.history,
+    )
+
+    return AnalyzeResponse(**result)

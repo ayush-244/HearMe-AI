@@ -19,8 +19,10 @@ class ChatService:
         history: Optional[list] = None
     ) -> str:
         prompt = self._prompt_service.build_chat_prompt(user_input, language, sentiment, history)
-        logger.debug("Sending prompt to LLM (len=%d chars)", len(prompt))
+        return self.invoke_llm(prompt)
 
+    def invoke_llm(self, prompt: str) -> str:
+        logger.debug("Sending prompt to LLM (len=%d chars)", len(prompt))
         try:
             response = self._llm.invoke(prompt)
             return response.content

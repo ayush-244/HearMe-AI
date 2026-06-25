@@ -10,6 +10,7 @@ class Settings(BaseSettings):
 
     sentiment_model_name: str = "cardiffnlp/twitter-roberta-base-sentiment-latest"
     llm_model_name: str = "mixtral-8x7b-32768"
+    zero_shot_model_name: str = "typeform/distilbert-base-uncased-mnli"
 
     max_history_messages: int = 10
     max_history_prompt_messages: int = 5

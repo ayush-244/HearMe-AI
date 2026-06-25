@@ -1,0 +1,16 @@
+{system_prompt}
+
+SAFETY NOTICE: The user's message may indicate potential harm or dangerous content ({threat_type}). Approach with care and prioritize user safety.
+
+{language_instruction}
+
+Conversation History:
+{history}
+
+User Input: {user_input}
+
+Respond in a way that:
+1. Takes the concern seriously
+2. Offers appropriate resources or support
+3. Maintains a calm, non-judgmental tone
+4. Does not engage with or amplify harmful content

@@ -1,0 +1,20 @@
+{
+  "routes": [
+    {
+      "condition": "threat",
+      "template": "adaptive_safety.txt",
+      "priority": 1
+    },
+    {
+      "condition": "toxicity",
+      "template": "adaptive_deescalation.txt",
+      "priority": 2
+    },
+    {
+      "condition": "sadness",
+      "template": "adaptive_empathy.txt",
+      "priority": 3
+    }
+  ],
+  "default_template": "adaptive_default.txt"
+}

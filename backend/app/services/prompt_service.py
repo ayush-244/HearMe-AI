@@ -2,7 +2,7 @@ import json
 import random
 import logging
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -13,6 +13,8 @@ class PromptService:
         self._language_configs: Dict[str, dict] = self._load_json("language_configs.json")
         self._sentiment_intros: Dict[str, List[str]] = self._load_json("sentiment_intros.json")
         self._chat_template: str = self._load_text("chat_template.txt")
+        self._adaptive_config: dict = self._load_json("adaptive_config.json")
+        self._adaptive_templates: Dict[str, str] = self._load_adaptive_templates()
 
     def _load_json(self, filename: str) -> dict:
         path = self._prompts_dir / filename
@@ -31,6 +33,18 @@ class PromptService:
         except Exception as e:
             logger.error("Failed to load %s: %s", filename, e)
             return ""
+
+    def _load_adaptive_templates(self) -> Dict[str, str]:
+        templates: Dict[str, str] = {}
+        routes = self._adaptive_config.get("routes", [])
+        for route in routes:
+            tpl_file = route.get("template", "")
+            if tpl_file:
+                templates[route["condition"]] = self._load_text(tpl_file)
+        default = self._adaptive_config.get("default_template", "")
+        if default:
+            templates["default"] = self._load_text(default)
+        return templates
 
     @property
     def language_configs(self) -> Dict[str, dict]:
@@ -67,3 +81,57 @@ class PromptService:
     def select_intro(self, sentiment: str) -> str:
         intros = self._sentiment_intros.get(sentiment, self._sentiment_intros.get("Neutral", ["Here's a response:"]))
         return random.choice(intros)
+
+    def build_adaptive_prompt(
+        self,
+        user_input: str,
+        language: str,
+        sentiment: str,
+        emotion: Dict[str, Any],
+        toxicity: Dict[str, Any],
+        threat: Dict[str, Any],
+        intent: Dict[str, Any],
+        history: Optional[List[Dict[str, str]]] = None,
+    ) -> str:
+        lang_config = self._language_configs.get(language, self._language_configs.get("en", {}))
+        route_key = self._select_adaptive_route(emotion, toxicity, threat)
+        template = self._adaptive_templates.get(route_key, self._chat_template)
+
+        history_lines = []
+        recent = history[-5:] if history else []
+        for msg in recent:
+            role = msg.get("role", "user")
+            content = msg.get("content", "")
+            history_lines.append(f"{role}: {content}")
+        history_str = "\n".join(history_lines)
+
+        prompt = template.format(
+            system_prompt=lang_config.get("system_prompt", ""),
+            language_instruction=lang_config.get("language_instruction", ""),
+            sentiment=sentiment,
+            emotion=emotion.get("label", "unknown"),
+            toxicity_category=toxicity.get("category", "none"),
+            threat_type=threat.get("threat_type", "none"),
+            intent=intent.get("intent", "unknown"),
+            history=history_str,
+            user_input=user_input,
+        )
+        return prompt
+
+    def _select_adaptive_route(
+        self,
+        emotion: Dict[str, Any],
+        toxicity: Dict[str, Any],
+        threat: Dict[str, Any],
+    ) -> str:
+        routes = self._adaptive_config.get("routes", [])
+        sorted_routes = sorted(routes, key=lambda r: r.get("priority", 99))
+        for route in sorted_routes:
+            condition = route.get("condition", "")
+            if condition == "threat" and threat.get("threat_detected", False):
+                return "threat"
+            if condition == "toxicity" and toxicity.get("is_toxic", False):
+                return "toxicity"
+            if condition == "sadness" and emotion.get("label") == "sadness":
+                return "sadness"
+        return "default"

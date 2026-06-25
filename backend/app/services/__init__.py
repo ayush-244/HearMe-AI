@@ -6,8 +6,18 @@ from .prompt_service import PromptService
 from .chat_service import ChatService
 from .history_service import HistoryService
 from .logging_service import LoggingService
+from .emotion_service import EmotionService
+from .toxicity_service import ToxicityService
+from .threat_service import ThreatService
+from .intent_service import IntentService
+from .pipeline_service import PipelineService
 from ai.sentiment.model import SentimentModel
 from ai.language.detector import LanguageDetector
+from ai.emotion.detector import EmotionDetector
+from ai.toxicity.detector import ToxicityDetector
+from ai.threat.detector import ThreatDetector
+from ai.intent.classifier import IntentClassifier
+from ai.pipeline.ai_pipeline import ZeroShotClassifier, AIPipeline
 from langchain_groq import ChatGroq
 
 _services: Optional[Dict] = None
@@ -36,6 +46,29 @@ def init_services() -> None:
     history_service = HistoryService(settings.max_history_messages)
     logging_service = LoggingService(settings.sentiment_log_file)
 
+    zero_shot = ZeroShotClassifier(settings.zero_shot_model_name)
+    emotion_detector = EmotionDetector(zero_shot)
+    toxicity_detector = ToxicityDetector(zero_shot)
+    threat_detector = ThreatDetector(zero_shot)
+    intent_classifier = IntentClassifier(zero_shot)
+
+    emotion_service = EmotionService(emotion_detector)
+    toxicity_service = ToxicityService(toxicity_detector)
+    threat_service = ThreatService(threat_detector)
+    intent_service = IntentService(intent_classifier)
+
+    ai_pipeline = AIPipeline(
+        language_service=language_service,
+        sentiment_service=sentiment_service,
+        emotion_service=emotion_service,
+        toxicity_service=toxicity_service,
+        threat_service=threat_service,
+        intent_service=intent_service,
+        prompt_service=prompt_service,
+        chat_service=chat_service,
+    )
+    pipeline_service = PipelineService(ai_pipeline)
+
     _services = {
         "sentiment": sentiment_service,
         "language": language_service,
@@ -43,6 +76,11 @@ def init_services() -> None:
         "chat": chat_service,
         "history": history_service,
         "logging": logging_service,
+        "emotion": emotion_service,
+        "toxicity": toxicity_service,
+        "threat": threat_service,
+        "intent": intent_service,
+        "pipeline": pipeline_service,
     }
 
 

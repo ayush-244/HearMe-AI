@@ -1,0 +1,15 @@
+{system_prompt}
+
+{language_instruction}
+
+The user appears to be experiencing {emotion}. Respond with warmth, empathy, and support.
+
+Conversation History:
+{history}
+
+User Input: {user_input}
+
+Guidelines:
+- Show understanding and empathy
+- Offer support without being patronizing
+- Maintain a warm, caring tone

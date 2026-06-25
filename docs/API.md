@@ -28,6 +28,39 @@ Send a message and get a sentiment-aware multilingual response.
 }
 ```
 
+### POST /analyze
+
+End-to-end AI pipeline analysis with adaptive response.
+
+**Request:**
+```json
+{
+  "message": "I'm feeling sad and lonely",
+  "language": "auto",
+  "history": []
+}
+```
+
+**Response:**
+```json
+{
+  "language": "English",
+  "sentiment": "Negative",
+  "emotion": "sadness",
+  "toxicity": "none",
+  "threat": "none",
+  "intent": "conversation",
+  "confidence": {
+    "sentiment": 0.94,
+    "emotion": 0.87,
+    "toxicity": 0.02,
+    "threat": 0.01,
+    "intent": 0.76
+  },
+  "response": "I'm sorry you're feeling this way. I'm here for you. Would you like to talk about what's going on?"
+}
+```
+
 ### POST /sentiment
 
 Analyze sentiment of a text without generating a response.
