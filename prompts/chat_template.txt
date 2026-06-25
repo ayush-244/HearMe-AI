@@ -1,0 +1,12 @@
+{system_prompt}
+
+{language_instruction}
+
+Context: The user's message has a {sentiment} sentiment.
+
+Conversation History:
+{history}
+
+User Input: {user_input}
+
+Respond carefully, maintaining the specified language, sentiment, and context.

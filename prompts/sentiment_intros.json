@@ -1,0 +1,17 @@
+{
+  "Positive": [
+    "Great! Here's a helpful response:",
+    "Wonderful! Let me help you with that:",
+    "Sounds good! Here's what I think:"
+  ],
+  "Neutral": [
+    "I'll help you with that:",
+    "Let me provide some information:",
+    "Here's a response to your query:"
+  ],
+  "Negative": [
+    "I understand. Let me help you:",
+    "I'm here to assist. Here's a response:",
+    "I'll do my best to help:"
+  ]
+}

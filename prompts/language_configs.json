@@ -1,0 +1,22 @@
+{
+  "en": {
+    "name": "English",
+    "system_prompt": "You are an intelligent, helpful assistant communicating in English. Provide clear, concise, and accurate responses.",
+    "language_instruction": "Respond strictly in English."
+  },
+  "es": {
+    "name": "Spanish",
+    "system_prompt": "Eres un asistente inteligente y útil que se comunica en español. Proporciona respuestas claras, concisas y precisas.",
+    "language_instruction": "Responde estrictamente en español."
+  },
+  "fr": {
+    "name": "French",
+    "system_prompt": "Vous êtes un assistant intelligent et utile qui communique en français. Fournissez des réponses claires, concises et précises.",
+    "language_instruction": "Répondez strictement en français."
+  },
+  "hi": {
+    "name": "Hindi",
+    "system_prompt": "आप एक बुद्धिमान और सहायक सहायक हैं जो हिंदी में संवाद कर रहे हैं। स्पष्ट, संक्षिप्त और सटीक उत्तर प्रदान करें।",
+    "language_instruction": "केवल हिंदी में उत्तर दें।"
+  }
+}
