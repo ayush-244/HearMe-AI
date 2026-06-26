@@ -13,9 +13,13 @@ from ..schemas.document import (
     ChunkResponse,
     ChunkListResponse,
     ChunkStatisticsResponse,
+    EmbeddingResponse,
+    EmbeddingListResponse,
+    EmbeddingChunkResponse,
 )
 from ..services import get_services
 from ..services.document_service import DocumentValidationError, DocumentExtractionError
+from ..services.embedding_service import EmbeddingError
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -227,3 +231,75 @@ async def get_chunk(document_id: str, chunk_id: str):
         raise HTTPException(status_code=404, detail="Chunk not found")
 
     return chunk
+
+
+@router.post("/documents/{document_id}/embed", response_model=EmbeddingResponse)
+async def embed_document(document_id: str):
+    services = get_services()
+    doc_service = services["document"]
+    emb_service = services["embedding"]
+
+    logger.info("/documents/{id}/embed request: id=%s", document_id)
+
+    meta = doc_service.get_metadata(document_id)
+    if meta is None:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    chunks_data = doc_service.get_chunks_data(document_id)
+    if chunks_data is None:
+        raise HTTPException(status_code=400, detail="Document must be chunked before embedding")
+
+    try:
+        result = emb_service.embed_document(document_id, chunks_data)
+        logger.info(
+            "/documents/{id}/embed success: chunks=%d, dimension=%d, model=%s",
+            document_id, len(result["chunks"]), result["dimension"], result["embedding_model"],
+        )
+        return EmbeddingResponse(
+            status="embedded",
+            chunks=len(result["chunks"]),
+            dimension=result["dimension"],
+            model=result["embedding_model"],
+            embedding_version=result["embedding_version"],
+        )
+    except EmbeddingError as e:
+        logger.warning("/documents/{id}/embed error: %s — %s", document_id, e.message)
+        raise HTTPException(status_code=e.status_code, detail=e.message)
+
+
+@router.get("/documents/{document_id}/embeddings", response_model=EmbeddingListResponse)
+async def list_embeddings(document_id: str):
+    services = get_services()
+    doc_service = services["document"]
+    emb_service = services["embedding"]
+
+    logger.info("/documents/{id}/embeddings list request: id=%s", document_id)
+
+    meta = doc_service.get_metadata(document_id)
+    if meta is None:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    result = emb_service.get_embedding_list(document_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Embeddings not found. Run embedding first.")
+
+    return EmbeddingListResponse(**result)
+
+
+@router.get("/documents/{document_id}/embeddings/{chunk_id}", response_model=EmbeddingChunkResponse)
+async def get_embedding(document_id: str, chunk_id: str):
+    services = get_services()
+    doc_service = services["document"]
+    emb_service = services["embedding"]
+
+    logger.info("/documents/{id}/embeddings/{chunk_id} request: id=%s", document_id)
+
+    meta = doc_service.get_metadata(document_id)
+    if meta is None:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    result = emb_service.get_embedding(document_id, chunk_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Embedding not found")
+
+    return EmbeddingChunkResponse(**result)

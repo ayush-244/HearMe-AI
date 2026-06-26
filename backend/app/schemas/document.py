@@ -151,3 +151,34 @@ class ChunkStatisticsResponse(BaseModel):
     largest_chunk: int
     smallest_chunk: int
     strategy: str
+
+
+class EmbeddingChunkInfo(BaseModel):
+    chunk_id: str
+    checksum: str
+    dimension: int
+
+
+class EmbeddingResponse(BaseModel):
+    status: str
+    chunks: int
+    dimension: int
+    model: str
+    embedding_version: str
+
+
+class EmbeddingListResponse(BaseModel):
+    document_id: str
+    embedding_model: str
+    embedding_version: str
+    dimension: int
+    created_at: str
+    chunks: List[EmbeddingChunkInfo]
+
+
+class EmbeddingChunkResponse(BaseModel):
+    chunk_id: str
+    checksum: str
+    dimension: int
+    model: str
+    vector: List[float]

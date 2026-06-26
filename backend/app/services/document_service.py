@@ -58,6 +58,7 @@ class DocumentService:
         self._extracted_dir = self._upload_dir / "extracted"
         self._analysis_dir = self._upload_dir / "analysis"
         self._chunks_dir = self._upload_dir / "chunks"
+        self._embeddings_dir = self._upload_dir / "embeddings"
         self._analyzer = analyzer
         self._chunk_engine = ChunkEngine()
         self._metadata: Dict[str, DocumentMetadata] = {}
@@ -77,6 +78,7 @@ class DocumentService:
         self._extracted_dir.mkdir(parents=True, exist_ok=True)
         self._analysis_dir.mkdir(parents=True, exist_ok=True)
         self._chunks_dir.mkdir(parents=True, exist_ok=True)
+        self._embeddings_dir.mkdir(parents=True, exist_ok=True)
 
     def _load_metadata(self) -> None:
         path = self._metadata_path
@@ -242,6 +244,13 @@ class DocumentService:
             except OSError as e:
                 logger.error("Delete failed (chunks file removal error): %s", e)
 
+        embeddings_path = self._embeddings_path(document_id)
+        if embeddings_path.exists():
+            try:
+                embeddings_path.unlink()
+            except OSError as e:
+                logger.error("Delete failed (embeddings file removal error): %s", e)
+
         del self._metadata[document_id]
         self._save_metadata()
 
@@ -380,6 +389,9 @@ class DocumentService:
 
     def _analysis_path(self, document_id: str) -> Path:
         return self._analysis_dir / f"{document_id}.json"
+
+    def _embeddings_path(self, document_id: str) -> Path:
+        return self._embeddings_dir / f"{document_id}.json"
 
     def _get_language_service(self):
         try:
@@ -567,3 +579,6 @@ class DocumentService:
         if data is None:
             return None
         return data.get("statistics")
+
+    def get_chunks_data(self, document_id: str) -> Optional[dict]:
+        return self._load_chunks_data(document_id)

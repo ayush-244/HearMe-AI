@@ -247,6 +247,61 @@ graph TD
 | markdown | Semantic | Rich structure (headings, lists, code) |
 | unknown | Fixed | Best-effort fallback |
 
+## Embedding Pipeline
+
+```mermaid
+graph TD
+    subgraph "Embedding Trigger"
+        EM[POST /documents/{id}/embed] --> EC{Already Chunked?}
+        EC -->|No| ER[Error: Chunk First]
+        EC -->|Yes| EmbeddingService.embed_document
+    end
+    subgraph "Embedding Service"
+        EmbeddingService --> Model[EmbeddingModel<br/>SentenceTransformer]
+        EmbeddingService --> Cache[EmbeddingCache<br/>SHA256 Checksum Dedup]
+        Model --> EN[Encode Batch<br/>normalize_embeddings=True]
+        Cache --> CM[Cache Hit/Miss Tracking]
+        EN --> SV[Save Embeddings<br/>uploads/embeddings/{id}.json]
+    end
+    subgraph "Retrieval"
+        DEL[DELETE /documents/{id}] --> DF[Embeddings JSON Removed]
+        GL[GET /embeddings] --> LP[List Chunks<br/>(no vectors)]
+        GC[GET /embeddings/{chunk_id}] --> RC[Return Single Vector]
+    end
+```
+
+## Configuration
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `EMBEDDING_MODEL_NAME` | `BAAI/bge-base-en-v1.5` | SentenceTransformer model |
+| `EMBEDDING_BATCH_SIZE` | `32` | Batch size for encoding |
+| `EMBEDDING_VERSION` | `1.0.0` | Embedding format version |
+| `EMBEDDING_MAX_SEQ_LENGTH` | `512` | Max tokens per input |
+
+## Embedding Cache Flow
+
+```text
+Input: ["text a", "text b", "text a"]
+          │
+          ▼
+  Compute SHA256 checksums
+          │
+          ▼
+  For each checksum:
+    ├── Cache hit? → Return cached vector
+    └── Cache miss? → Track for encoding
+          │
+          ▼
+  Embed only unique texts via model.encode()
+          │
+          ▼
+  Store results in cache + backfill duplicates
+          │
+          ▼
+  Return vectors in original order
+```
+
 ## Chunk Fields
 
 | Field | Type | Description |
@@ -319,3 +374,6 @@ graph TD
 | FixedChunker | Splits text into fixed-size word windows with configurable overlap |
 | SectionChunker | Respects document section boundaries; never splits across sections |
 | SemanticChunker | Splits on paragraphs, headings, tables, code blocks, bullet lists; avoids cutting sentences |
+| EmbeddingModel | Wraps SentenceTransformer with lazy initialization, batch encoding, embedding normalization, zero-vector fallback for empty text |
+| EmbeddingCache | SHA256 checksum-based cache with deduplication, hit/miss tracking, and in-batch duplicate backfill |
+| EmbeddingService | Orchestrates embedding generation — delegates to EmbeddingModel + EmbeddingCache, saves to `uploads/embeddings/{id}.json`, provides CRUD for embeddings, delete cascade |

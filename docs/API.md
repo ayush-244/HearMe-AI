@@ -318,6 +318,83 @@ Retrieve stored analysis for a document. Analysis persists on disk.
 
 ---
 
+## Embeddings
+
+### POST /documents/{id}/embed
+
+Generate embeddings for all chunks of a document. Document must be chunked first via `POST /documents/{id}/chunk`.
+
+**Response:**
+```json
+{
+  "document_id": "550e8400-e29b-41d4-a716-446655440000",
+  "embedding_model": "BAAI/bge-base-en-v1.5",
+  "embedding_version": "1.0.0",
+  "dimension": 768,
+  "created_at": "2026-06-27T12:00:00",
+  "chunks": [
+    {
+      "chunk_id": "abc-123-def",
+      "checksum": "sha256hex...",
+      "vector": [0.012, -0.034, ...]
+    }
+  ]
+}
+```
+
+**Errors:**
+- `400` — Document not chunked yet (chunk first)
+- `404` — Document not found
+
+### GET /documents/{id}/embeddings
+
+List all embeddings for a document (vectors omitted; includes checksum + dimension only).
+
+**Response:**
+```json
+{
+  "document_id": "550e8400-e29b-41d4-a716-446655440000",
+  "embedding_model": "BAAI/bge-base-en-v1.5",
+  "embedding_version": "1.0.0",
+  "dimension": 768,
+  "created_at": "2026-06-27T12:00:00",
+  "chunks": [
+    {
+      "chunk_id": "abc-123-def",
+      "checksum": "sha256hex...",
+      "dimension": 768
+    }
+  ]
+}
+```
+
+**Errors:**
+- `404` — Document not found or embeddings not yet generated
+
+### GET /documents/{id}/embeddings/{chunk_id}
+
+Retrieve the full embedding vector for a single chunk.
+
+**Response:**
+```json
+{
+  "chunk_id": "abc-123-def",
+  "checksum": "sha256hex...",
+  "dimension": 768,
+  "model": "BAAI/bge-base-en-v1.5",
+  "vector": [0.012, -0.034, ...]
+}
+```
+
+**Errors:**
+- `404` — Document or chunk embedding not found
+
+### DELETE /documents/{id}
+
+Deleting a document also removes its embeddings (handled automatically).
+
+---
+
 ## Chunking
 
 ### POST /documents/{id}/chunk

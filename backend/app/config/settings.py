@@ -18,6 +18,11 @@ class Settings(BaseSettings):
     sentiment_log_file: str = "sentiment_analysis_log.txt"
     max_upload_size: int = 20 * 1024 * 1024  # 20 MB
 
+    embedding_model_name: str = "BAAI/bge-base-en-v1.5"
+    embedding_batch_size: int = 32
+    embedding_version: str = "1.0.0"
+    embedding_max_seq_length: int = 512
+
     PROJECT_ROOT: ClassVar[Path] = Path(__file__).resolve().parent.parent.parent.parent
     PROMPTS_DIR: ClassVar[Path] = PROJECT_ROOT / "prompts"
     UPLOAD_DIR: ClassVar[Path] = PROJECT_ROOT / "uploads"

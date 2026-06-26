@@ -13,6 +13,7 @@ from .threat_service import ThreatService
 from .intent_service import IntentService
 from .pipeline_service import PipelineService
 from .document_service import DocumentService
+from .embedding_service import EmbeddingService
 from ai.sentiment.model import SentimentModel
 from ai.language.detector import LanguageDetector
 from ai.emotion.detector import EmotionDetector
@@ -84,8 +85,18 @@ def init_services() -> None:
     document_analyzer = DocumentAnalyzer()
     document_service = DocumentService(settings.UPLOAD_DIR, analyzer=document_analyzer)
 
+    logger.info("Initializing EmbeddingService: model=%s", settings.embedding_model_name)
+    embedding_service = EmbeddingService(
+        embeddings_dir=settings.UPLOAD_DIR / "embeddings",
+        model_name=settings.embedding_model_name,
+        batch_size=settings.embedding_batch_size,
+        embedding_version=settings.embedding_version,
+        max_seq_length=settings.embedding_max_seq_length,
+    )
+
     _services = {
         "document": document_service,
+        "embedding": embedding_service,
         "sentiment": sentiment_service,
         "language": language_service,
         "prompt": prompt_service,
