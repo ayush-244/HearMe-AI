@@ -193,6 +193,58 @@ Delete a document (metadata and file removed from disk).
 **Errors:**
 - `404` — Document not found
 
+### POST /documents/{id}/extract
+
+Extract text content from an uploaded document. Uses the appropriate loader based on file type.
+
+**Response:**
+```json
+{
+  "document_id": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "extracted",
+  "pages": 10,
+  "words": 2010,
+  "characters": 12340
+}
+```
+
+**Errors:**
+- `404` — Document not found or file missing from disk
+- `422` — Extraction failed (corrupted file, password-protected PDF, unsupported encoding)
+
+### GET /documents/{id}/content
+
+Get a preview of extracted document content.
+
+Returns preview only (first ~500 chars). Does not return full text by default.
+
+**Response (extracted):**
+```json
+{
+  "document_id": "550e8400-e29b-41d4-a716-446655440000",
+  "preview": "This is the beginning of the document...",
+  "pages": 10,
+  "words": 2010,
+  "characters": 12340,
+  "extracted": true
+}
+```
+
+**Response (not yet extracted):**
+```json
+{
+  "document_id": "550e8400-e29b-41d4-a716-446655440000",
+  "preview": "",
+  "pages": 0,
+  "words": 0,
+  "characters": 0,
+  "extracted": false
+}
+```
+
+**Errors:**
+- `404` — Document not found
+
 ---
 
 ### POST /feedback

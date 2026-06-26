@@ -6,7 +6,11 @@ from unittest.mock import Mock, patch
 from fastapi.testclient import TestClient
 
 from backend.app.main import app
-from backend.app.services.document_service import DocumentService
+from backend.app.services.document_service import DocumentService, DocumentExtractionError
+from backend.app.schemas.document import (
+    UploadResponse, FileType, DocumentStatus,
+    ExtractionResponse, ContentResponse, DeleteResponse, DocumentListItem, DocumentMetadata,
+)
 
 
 @pytest.fixture
@@ -24,8 +28,6 @@ def client(mock_services):
 
 class TestDocumentRoutes:
     def test_upload_success(self, client, mock_services):
-        from backend.app.schemas.document import UploadResponse, FileType, DocumentStatus
-
         mock_services["document"].upload.return_value = UploadResponse(
             document_id="abc-123",
             filename="test.pdf",
@@ -146,5 +148,89 @@ class TestDocumentRoutes:
         )
 
         response = client.delete("/api/v1/documents/nonexistent")
+
+        assert response.status_code == 404
+
+    def test_extract_success(self, client, mock_services):
+        mock_services["document"].extract_document.return_value = ExtractionResponse(
+            document_id="doc-1",
+            status="extracted",
+            pages=10,
+            words=2010,
+            characters=12340,
+        )
+
+        response = client.post("/api/v1/documents/doc-1/extract")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["document_id"] == "doc-1"
+        assert data["status"] == "extracted"
+        assert data["pages"] == 10
+        assert data["words"] == 2010
+        assert data["characters"] == 12340
+
+    def test_extract_not_found(self, client, mock_services):
+        mock_services["document"].extract_document.side_effect = DocumentExtractionError(
+            "Document not found", status_code=404
+        )
+
+        response = client.post("/api/v1/documents/nonexistent/extract")
+
+        assert response.status_code == 404
+
+    def test_extract_error(self, client, mock_services):
+        mock_services["document"].extract_document.side_effect = DocumentExtractionError(
+            "Corrupted PDF", status_code=422
+        )
+
+        response = client.post("/api/v1/documents/doc-1/extract")
+
+        assert response.status_code == 422
+        data = response.json()
+        assert "Corrupted PDF" in data["detail"]
+
+    def test_content_success(self, client, mock_services):
+        mock_services["document"].get_document_content.return_value = ContentResponse(
+            document_id="doc-1",
+            preview="This is a preview of the document...",
+            pages=10,
+            words=2010,
+            characters=12340,
+            extracted=True,
+        )
+
+        response = client.get("/api/v1/documents/doc-1/content")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["document_id"] == "doc-1"
+        assert data["extracted"] is True
+        assert data["pages"] == 10
+        assert "preview" in data
+
+    def test_content_not_extracted(self, client, mock_services):
+        mock_services["document"].get_document_content.return_value = ContentResponse(
+            document_id="doc-1",
+            preview="",
+            pages=0,
+            words=0,
+            characters=0,
+            extracted=False,
+        )
+
+        response = client.get("/api/v1/documents/doc-1/content")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["extracted"] is False
+        assert data["preview"] == ""
+
+    def test_content_not_found(self, client, mock_services):
+        mock_services["document"].get_document_content.side_effect = DocumentExtractionError(
+            "Document not found", status_code=404
+        )
+
+        response = client.get("/api/v1/documents/nonexistent/content")
 
         assert response.status_code == 404

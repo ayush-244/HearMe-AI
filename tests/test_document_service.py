@@ -1,9 +1,11 @@
 """Unit tests for DocumentService."""
 import pytest
+import json
 from pathlib import Path
 from backend.app.services.document_service import (
     DocumentService,
     DocumentValidationError,
+    DocumentExtractionError,
 )
 from backend.app.schemas.document import DocumentStatus
 
@@ -154,3 +156,127 @@ class TestDocumentService:
         svc = DocumentService(upload_dir)
         for sub in ["pdf", "docx", "txt", "markdown"]:
             assert (upload_dir / sub).exists()
+
+    def test_extract_pdf(self, upload_dir, tmp_path):
+        import fitz
+        pdf_path = tmp_path / "temp.pdf"
+        doc = fitz.open()
+        page = doc.new_page()
+        page.insert_text((72, 72), "Test content from PDF", fontsize=12)
+        doc.save(str(pdf_path))
+        doc.close()
+        content = pdf_path.read_bytes()
+
+        svc = DocumentService(upload_dir)
+        upload_result = svc.upload("test.pdf", content)
+        result = svc.extract_document(upload_result.document_id)
+        assert result.status == "extracted"
+        assert result.pages >= 1
+        assert result.words > 0
+        assert result.characters > 0
+
+    def test_extract_then_get_content(self, upload_dir, tmp_path):
+        import fitz
+        pdf_path = tmp_path / "temp.pdf"
+        doc = fitz.open()
+        page = doc.new_page()
+        page.insert_text((72, 72), "Content for preview test", fontsize=12)
+        doc.save(str(pdf_path))
+        doc.close()
+        content = pdf_path.read_bytes()
+
+        svc = DocumentService(upload_dir)
+        upload_result = svc.upload("preview.pdf", content)
+        svc.extract_document(upload_result.document_id)
+
+        content_result = svc.get_document_content(upload_result.document_id)
+        assert content_result.extracted is True
+        assert "Content for preview test" in content_result.preview
+        assert content_result.pages >= 1
+
+    def test_get_content_before_extraction(self, upload_dir):
+        svc = DocumentService(upload_dir)
+        svc.upload("test.txt", b"Hello")
+        doc_id = list(svc._metadata.keys())[0]
+        result = svc.get_document_content(doc_id)
+        assert result.extracted is False
+        assert result.preview == ""
+
+    def test_extract_nonexistent_document(self, upload_dir):
+        svc = DocumentService(upload_dir)
+        with pytest.raises(DocumentExtractionError, match="Document not found"):
+            svc.extract_document("nonexistent-id")
+
+    def test_extract_unsupported_type(self, upload_dir):
+        svc = DocumentService(upload_dir)
+        with pytest.raises(DocumentValidationError, match="Unsupported file type"):
+            svc.upload("test.exe", b"cannot extract")
+
+    def test_is_extracted(self, upload_dir, tmp_path):
+        import fitz
+        pdf_path = tmp_path / "temp.pdf"
+        doc = fitz.open()
+        page = doc.new_page()
+        page.insert_text((72, 72), "Check if extracted", fontsize=12)
+        doc.save(str(pdf_path))
+        doc.close()
+
+        svc = DocumentService(upload_dir)
+        upload_result = svc.upload("check.pdf", pdf_path.read_bytes())
+        assert svc.is_extracted(upload_result.document_id) is False
+        svc.extract_document(upload_result.document_id)
+        assert svc.is_extracted(upload_result.document_id) is True
+
+    def test_delete_removes_extracted_content(self, upload_dir, tmp_path):
+        import fitz
+        pdf_path = tmp_path / "temp.pdf"
+        doc = fitz.open()
+        page = doc.new_page()
+        page.insert_text((72, 72), "Delete me", fontsize=12)
+        doc.save(str(pdf_path))
+        doc.close()
+
+        svc = DocumentService(upload_dir)
+        upload_result = svc.upload("delete_me.pdf", pdf_path.read_bytes())
+        svc.extract_document(upload_result.document_id)
+        assert svc.is_extracted(upload_result.document_id) is True
+
+        svc.delete(upload_result.document_id)
+        assert svc.is_extracted(upload_result.document_id) is False
+
+    def test_extracted_metadata_persists(self, upload_dir, tmp_path):
+        import fitz
+        pdf_path = tmp_path / "temp.pdf"
+        doc = fitz.open()
+        page = doc.new_page()
+        page.insert_text((72, 72), "Persist test", fontsize=12)
+        doc.save(str(pdf_path))
+        doc.close()
+
+        svc1 = DocumentService(upload_dir)
+        upload_result = svc1.upload("persist.pdf", pdf_path.read_bytes())
+        doc_id = upload_result.document_id
+        svc1.extract_document(doc_id)
+
+        svc2 = DocumentService(upload_dir)
+        content = svc2.get_document_content(doc_id)
+        assert content.extracted is True
+        assert "Persist test" in content.preview
+
+    def test_extracted_status_in_metadata(self, upload_dir, tmp_path):
+        import fitz
+        pdf_path = tmp_path / "temp.pdf"
+        doc = fitz.open()
+        page = doc.new_page()
+        page.insert_text((72, 72), "Status check", fontsize=12)
+        doc.save(str(pdf_path))
+        doc.close()
+
+        svc = DocumentService(upload_dir)
+        upload_result = svc.upload("status.pdf", pdf_path.read_bytes())
+        meta = svc.get_metadata(upload_result.document_id)
+        assert meta.status == DocumentStatus.uploaded
+
+        svc.extract_document(upload_result.document_id)
+        meta = svc.get_metadata(upload_result.document_id)
+        assert meta.status == DocumentStatus.extracted

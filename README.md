@@ -15,6 +15,7 @@ A production-ready multilingual chatbot that detects user sentiment, emotion, to
 - **Multilingual Responses**: LLM-powered responses in the detected or selected language
 - **Chat History**: In-memory conversation history with sliding window
 - **Document Management**: Upload, validate, list, and delete PDF, DOCX, TXT, and Markdown files with MIME validation and size enforcement
+- **Text Extraction**: Extract, normalize, and store text content from PDF (PyMuPDF), DOCX (python-docx), TXT (multi-encoding), and Markdown files with preview generation
 
 ## Architecture
 

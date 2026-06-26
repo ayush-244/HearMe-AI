@@ -13,6 +13,7 @@ class FileType(str, Enum):
 
 class DocumentStatus(str, Enum):
     uploaded = "uploaded"
+    extracted = "extracted"
     failed = "failed"
 
 
@@ -50,4 +51,27 @@ class DocumentListResponse(BaseModel):
 class DeleteResponse(BaseModel):
     status: str
     document_id: str
+    message: str
+
+
+class ExtractionResponse(BaseModel):
+    document_id: str
+    status: str
+    pages: int
+    words: int
+    characters: int
+
+
+class ContentResponse(BaseModel):
+    document_id: str
+    preview: str
+    pages: int
+    words: int
+    characters: int
+    extracted: bool
+
+
+class ExtractionError(BaseModel):
+    document_id: str
+    status: str
     message: str

@@ -7,9 +7,11 @@ from ..schemas.document import (
     DocumentListItem,
     DocumentMetadata,
     DeleteResponse,
+    ExtractionResponse,
+    ContentResponse,
 )
 from ..services import get_services
-from ..services.document_service import DocumentValidationError
+from ..services.document_service import DocumentValidationError, DocumentExtractionError
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -63,3 +65,41 @@ async def delete_document(document_id: str):
         raise HTTPException(status_code=404, detail="Document not found")
     logger.info("/documents/{id} deleted: id=%s", document_id)
     return result
+
+
+@router.post("/documents/{document_id}/extract", response_model=ExtractionResponse)
+async def extract_document(document_id: str):
+    services = get_services()
+    doc_service = services["document"]
+
+    logger.info("/documents/{id}/extract request: id=%s", document_id)
+
+    try:
+        result = doc_service.extract_document(document_id)
+        logger.info(
+            "/documents/{id}/extract success: pages=%d, words=%d, chars=%d",
+            document_id, result.pages, result.words, result.characters,
+        )
+        return result
+    except DocumentExtractionError as e:
+        logger.warning("/documents/{id}/extract error: %s — %s", document_id, e.message)
+        raise HTTPException(status_code=e.status_code, detail=e.message)
+
+
+@router.get("/documents/{document_id}/content", response_model=ContentResponse)
+async def get_document_content(document_id: str):
+    services = get_services()
+    doc_service = services["document"]
+
+    logger.info("/documents/{id}/content request: id=%s", document_id)
+
+    try:
+        result = doc_service.get_document_content(document_id)
+        logger.info(
+            "/documents/{id}/content retrieved: extracted=%s, pages=%d, words=%d",
+            document_id, result.extracted, result.pages, result.words,
+        )
+        return result
+    except DocumentExtractionError as e:
+        logger.warning("/documents/{id}/content error: %s — %s", document_id, e.message)
+        raise HTTPException(status_code=e.status_code, detail=e.message)

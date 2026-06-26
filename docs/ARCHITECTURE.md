@@ -72,6 +72,34 @@ graph TD
     STG --> ENV
 ```
 
+## Document Extraction Pipeline
+
+```mermaid
+graph TD
+    subgraph "Upload Flow"
+        U[Upload File] --> V[Validate Extension + MIME + Size]
+        V --> S[Save Raw File<br/>uploads/{type}/{uuid}.{ext}]
+        S --> M[Save Metadata<br/>uploads/metadata.json]
+    end
+    subgraph "Extraction Flow"
+        E[POST /extract] --> L{Loader Selection}
+        L -->|.pdf| PDF[PDFLoader<br/>PyMuPDF]
+        L -->|.docx| DOCX[DOCXLoader<br/>python-docx]
+        L -->|.txt| TXT[TXTLoader<br/>UTF-8/16/Latin-1]
+        L -->|.md| MD[MarkdownLoader<br/>Syntax Stripper]
+        PDF --> N[DocumentNormalizer]
+        DOCX --> N
+        TXT --> N
+        MD --> N
+        N --> ST[Save Extracted JSON<br/>uploads/extracted/{id}.json]
+        ST --> MU[Update Metadata Status<br/>uploaded → extracted]
+    end
+    subgraph "Content Flow"
+        C[GET /content] --> LC[Load Extracted JSON]
+        LC --> PR[Return Preview + Metadata]
+    end
+```
+
 ## AI Pipeline Data Flow
 
 ```mermaid
@@ -143,4 +171,9 @@ User Input
 | PipelineService | Wraps AIPipeline, validates input |
 | HistoryService | Manages conversation history with sliding window |
 | LoggingService | Handles sentiment log file writes |
-| DocumentService | Manages document upload, validation, storage, listing, deletion |
+| DocumentService | Manages document upload, validation, storage, extraction, content preview, deletion |
+| PDFLoader | Extracts text from PDF using PyMuPDF (fitz) — handles encrypted, corrupted, scanned |
+| DOCXLoader | Extracts text from DOCX using python-docx — paragraphs + tables |
+| TXTLoader | Extracts text from TXT with multi-encoding support (UTF-8, UTF-16, Latin-1) |
+| MarkdownLoader | Extracts plain text from Markdown — strips syntax, keeps content |
+| DocumentNormalizer | Normalizes Unicode, line endings, whitespace; generates previews |
