@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 def _init_services():
     settings = Settings()
 
-    sentiment_model = SentimentModel(settings.sentiment_model_name)
+    sentiment_model = SentimentModel(settings.sentiment_model_name, settings.hf_token)
     sentiment_service = SentimentService(sentiment_model)
 
     language_detector = LanguageDetector()

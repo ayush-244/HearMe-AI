@@ -9,9 +9,9 @@ LABEL_NAMES = ['Negative', 'Neutral', 'Positive']
 
 
 class SentimentModel:
-    def __init__(self, model_name: str = "cardiffnlp/twitter-roberta-base-sentiment-latest"):
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self.model = AutoModelForSequenceClassification.from_pretrained(model_name)
+    def __init__(self, model_name: str = "cardiffnlp/twitter-roberta-base-sentiment-latest", token: str | None = None):
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name, token=token)
+        self.model = AutoModelForSequenceClassification.from_pretrained(model_name, token=token)
         self.model.eval()
         logger.info("SentimentModel loaded: %s", model_name)
 

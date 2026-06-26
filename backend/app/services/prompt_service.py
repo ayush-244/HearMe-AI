@@ -39,11 +39,13 @@ class PromptService:
         routes = self._adaptive_config.get("routes", [])
         for route in routes:
             tpl_file = route.get("template", "")
-            if tpl_file:
-                templates[route["condition"]] = self._load_text(tpl_file)
+            condition = route.get("condition", "")
+            if tpl_file and condition:
+                templates[condition] = self._load_text(tpl_file)
         default = self._adaptive_config.get("default_template", "")
         if default:
             templates["default"] = self._load_text(default)
+        logger.info("Loaded %d adaptive templates: %s", len(templates), list(templates.keys()))
         return templates
 
     @property
@@ -61,21 +63,25 @@ class PromptService:
         sentiment: str,
         history: Optional[List[Dict[str, str]]] = None
     ) -> str:
-        lang_config = self._language_configs.get(language, self._language_configs.get("en"))
+        lang_config = self._language_configs.get(language) or self._language_configs.get("en")
 
         history_lines = []
         recent = history[-5:] if history else []
         for msg in recent:
-            history_lines.append(f"{msg['role']}: {msg['content']}")
+            role = msg.get("role", "user")
+            content = msg.get("content", "")
+            history_lines.append(f"{role}: {content}")
         history_str = "\n".join(history_lines)
 
         prompt = self._chat_template.format(
-            system_prompt=lang_config["system_prompt"],
-            language_instruction=lang_config["language_instruction"],
-            sentiment=sentiment,
+            system_prompt=lang_config.get("system_prompt", "") if lang_config else "",
+            language_instruction=lang_config.get("language_instruction", "") if lang_config else "",
+            sentiment=sentiment or "Neutral",
             history=history_str,
-            user_input=user_input,
+            user_input=user_input or "",
         )
+        logger.debug("build_chat_prompt: lang=%s, sentiment=%s, history=%d msgs, prompt=%d chars",
+                     language, sentiment, len(recent), len(prompt))
         return prompt
 
     def select_intro(self, sentiment: str) -> str:
@@ -93,7 +99,7 @@ class PromptService:
         intent: Dict[str, Any],
         history: Optional[List[Dict[str, str]]] = None,
     ) -> str:
-        lang_config = self._language_configs.get(language, self._language_configs.get("en", {}))
+        lang_config = self._language_configs.get(language) or self._language_configs.get("en", {})
         route_key = self._select_adaptive_route(emotion, toxicity, threat)
         template = self._adaptive_templates.get(route_key, self._chat_template)
 
@@ -106,16 +112,18 @@ class PromptService:
         history_str = "\n".join(history_lines)
 
         prompt = template.format(
-            system_prompt=lang_config.get("system_prompt", ""),
-            language_instruction=lang_config.get("language_instruction", ""),
-            sentiment=sentiment,
+            system_prompt=lang_config.get("system_prompt", "") if lang_config else "",
+            language_instruction=lang_config.get("language_instruction", "") if lang_config else "",
+            sentiment=sentiment or "Neutral",
             emotion=emotion.get("label", "unknown"),
             toxicity_category=toxicity.get("category", "none"),
             threat_type=threat.get("threat_type", "none"),
             intent=intent.get("intent", "unknown"),
             history=history_str,
-            user_input=user_input,
+            user_input=user_input or "",
         )
+        logger.debug("build_adaptive_prompt: route=%s, lang=%s, sentiment=%s, prompt=%d chars",
+                     route_key, language, sentiment, len(prompt))
         return prompt
 
     def _select_adaptive_route(

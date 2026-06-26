@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     google_api_key: str = ""
 
     sentiment_model_name: str = "cardiffnlp/twitter-roberta-base-sentiment-latest"
-    llm_model_name: str = "mixtral-8x7b-32768"
+    llm_model_name: str = "llama-3.3-70b-versatile"
     zero_shot_model_name: str = "typeform/distilbert-base-uncased-mnli"
 
     max_history_messages: int = 10
