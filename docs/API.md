@@ -318,6 +318,111 @@ Retrieve stored analysis for a document. Analysis persists on disk.
 
 ---
 
+## Chunking
+
+### POST /documents/{id}/chunk
+
+Generate chunks from an extracted document. Automatically selects chunking strategy based on document type.
+
+Document must be extracted first via `POST /documents/{id}/extract`.
+
+**Response:**
+```json
+{
+  "status": "chunked",
+  "strategy": "section",
+  "chunk_count": 42
+}
+```
+
+**Errors:**
+- `400` — Document not extracted yet (extract first)
+- `404` — Document not found
+
+### GET /documents/{id}/chunks
+
+List all chunks for a document (preview only, not full text).
+
+**Response:**
+```json
+{
+  "document_id": "550e8400-e29b-41d4-a716-446655440000",
+  "chunks": [
+    {
+      "chunk_id": "abc-123-def",
+      "section_name": "Introduction",
+      "chunk_index": 0,
+      "word_count": 480,
+      "character_count": 2750,
+      "estimated_tokens": 624,
+      "page_start": 1,
+      "page_end": 1,
+      "preview": "This is the beginning of the introduction section..."
+    }
+  ],
+  "statistics": {
+    "document_id": "550e8400-e29b-41d4-a716-446655440000",
+    "chunks": 42,
+    "average_chunk_size": 480.0,
+    "largest_chunk": 620,
+    "smallest_chunk": 92,
+    "strategy": "section"
+  }
+}
+```
+
+**Errors:**
+- `404` — Document not found or chunks not yet generated
+
+### GET /documents/{id}/chunks/{chunk_id}
+
+Retrieve the full content of a single chunk by its chunk ID.
+
+**Response:**
+```json
+{
+  "chunk_id": "abc-123-def",
+  "document_id": "550e8400-e29b-41d4-a716-446655440000",
+  "section_name": "Introduction",
+  "chunk_index": 0,
+  "page_start": 1,
+  "page_end": 1,
+  "start_offset": 0,
+  "end_offset": 2750,
+  "word_count": 480,
+  "character_count": 2750,
+  "estimated_tokens": 624,
+  "overlap_previous": "",
+  "overlap_next": "previous section content for context...",
+  "text": "Full text content of this chunk...",
+  "metadata": {}
+}
+```
+
+**Errors:**
+- `404` — Document or chunk not found
+
+### GET /documents/{id}/chunks/statistics
+
+Get chunk statistics for a document without returning chunk content.
+
+**Response:**
+```json
+{
+  "document_id": "550e8400-e29b-41d4-a716-446655440000",
+  "chunks": 42,
+  "average_chunk_size": 480.0,
+  "largest_chunk": 620,
+  "smallest_chunk": 92,
+  "strategy": "section"
+}
+```
+
+**Errors:**
+- `404` — Document not found or chunks not yet generated
+
+---
+
 ### POST /feedback
 
 Submit feedback on a response.

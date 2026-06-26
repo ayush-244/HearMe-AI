@@ -10,6 +10,9 @@ from ..schemas.document import (
     ExtractionResponse,
     ContentResponse,
     AnalysisResponse,
+    ChunkResponse,
+    ChunkListResponse,
+    ChunkStatisticsResponse,
 )
 from ..services import get_services
 from ..services.document_service import DocumentValidationError, DocumentExtractionError
@@ -141,3 +144,86 @@ async def get_document_analysis(document_id: str):
 
     logger.info("/documents/{id}/analysis retrieved", document_id)
     return analysis
+
+
+@router.post("/documents/{document_id}/chunk", response_model=ChunkResponse)
+async def chunk_document(document_id: str):
+    services = get_services()
+    doc_service = services["document"]
+
+    logger.info("/documents/{id}/chunk request: id=%s", document_id)
+
+    try:
+        result = doc_service.chunk_document(document_id)
+        logger.info(
+            "/documents/{id}/chunk success: strategy=%s, chunks=%d",
+            document_id, result["strategy"], len(result["chunks"]),
+        )
+        return ChunkResponse(
+            status="chunked",
+            strategy=result["strategy"],
+            chunk_count=len(result["chunks"]),
+        )
+    except DocumentExtractionError as e:
+        logger.warning("/documents/{id}/chunk error: %s — %s", document_id, e.message)
+        raise HTTPException(status_code=e.status_code, detail=e.message)
+
+
+@router.get("/documents/{document_id}/chunks", response_model=ChunkListResponse)
+async def list_chunks(document_id: str):
+    services = get_services()
+    doc_service = services["document"]
+
+    logger.info("/documents/{id}/chunks list request: id=%s", document_id)
+
+    meta = doc_service.get_metadata(document_id)
+    if meta is None:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    previews = doc_service.get_chunks_preview(document_id)
+    if previews is None:
+        raise HTTPException(status_code=404, detail="Chunks not found. Run chunking first.")
+
+    stats = doc_service.get_chunk_statistics(document_id)
+
+    return ChunkListResponse(
+        document_id=document_id,
+        chunks=previews,
+        statistics=stats,
+    )
+
+
+@router.get("/documents/{document_id}/chunks/statistics", response_model=ChunkStatisticsResponse)
+async def get_chunk_statistics(document_id: str):
+    services = get_services()
+    doc_service = services["document"]
+
+    logger.info("/documents/{id}/chunks/statistics request: id=%s", document_id)
+
+    meta = doc_service.get_metadata(document_id)
+    if meta is None:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    stats = doc_service.get_chunk_statistics(document_id)
+    if stats is None:
+        raise HTTPException(status_code=404, detail="Chunks not found. Run chunking first.")
+
+    return ChunkStatisticsResponse(**stats)
+
+
+@router.get("/documents/{document_id}/chunks/{chunk_id}")
+async def get_chunk(document_id: str, chunk_id: str):
+    services = get_services()
+    doc_service = services["document"]
+
+    logger.info("/documents/{id}/chunks/{chunk_id} request: id=%s", document_id)
+
+    meta = doc_service.get_metadata(document_id)
+    if meta is None:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    chunk = doc_service.get_chunk(document_id, chunk_id)
+    if chunk is None:
+        raise HTTPException(status_code=404, detail="Chunk not found")
+
+    return chunk

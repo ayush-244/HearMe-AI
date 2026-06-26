@@ -17,6 +17,7 @@ A production-ready multilingual chatbot that detects user sentiment, emotion, to
 - **Document Management**: Upload, validate, list, and delete PDF, DOCX, TXT, and Markdown files with MIME validation and size enforcement
 - **Text Extraction**: Extract, normalize, and store text content from PDF (PyMuPDF), DOCX (python-docx), TXT (multi-encoding), and Markdown files with preview generation
 - **Document Intelligence**: Analyze document structure without LLMs — classify document type (research paper, resume, book, etc.), extract logical sections, detect tables/images/code/URLs/emails, extract keywords (lightweight RAKE-like), estimate reading time, generate summary preview, and detect language
+- **Intelligent Chunking**: Production-grade chunking engine with three strategies — Fixed-size (500 words, 50 overlap), Section-aware (respects document sections), and Semantic (preserves paragraphs, tables, code blocks, lists). Automatic strategy selection per document type. Validation, deduplication, statistics, and persistent storage at `uploads/chunks/`
 
 ## Architecture
 
@@ -38,6 +39,14 @@ A production-ready multilingual chatbot that detects user sentiment, emotion, to
 │   ├── threat/         # Threat detector (zero-shot)
 │   ├── intent/         # Intent classifier (zero-shot)
 │   ├── pipeline/       # AI pipeline orchestrator & shared classifier
+│   ├── chunking/       # Intelligent chunking engine
+│   │   ├── chunk_engine.py       # Orchestrator
+│   │   ├── chunk_models.py       # Chunk dataclass + statistics
+│   │   ├── chunk_strategy.py     # Strategy selection logic
+│   │   ├── fixed_chunker.py      # Fixed-size chunking
+│   │   ├── section_chunker.py    # Section-aware chunking
+│   │   ├── semantic_chunker.py   # Semantic chunking
+│   │   └── overlap.py            # Overlap generation
 │   └── documents/      # Document processing
 │       ├── analyzer.py           # Document intelligence orchestrator
 │       ├── document_classifier.py# Heuristic document type classification

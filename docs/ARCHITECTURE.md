@@ -190,6 +190,105 @@ User Input
             └──→ ChatService.invoke_llm(prompt) → response text
 ```
 
+## Chunking Pipeline
+
+```mermaid
+graph TD
+    subgraph "Chunking Trigger"
+        CK[POST /documents/{id}/chunk] --> CE{Already Extracted?}
+        CE -->|No| ER[Error: Extract First]
+        CE -->|Yes| SS[Strategy Selector]
+    end
+    subgraph "Strategy Selection"
+        SS --> ST{Document Type}
+        ST -->|research_paper| SC[Section Chunking]
+        ST -->|resume| SC
+        ST -->|book| SC
+        ST -->|report| SC
+        ST -->|invoice| SC
+        ST -->|presentation| SC
+        ST -->|manual| SC
+        ST -->|article| SC
+        ST -->|notes| SMC[Semantic Chunking]
+        ST -->|unknown / txt| FC[Fixed Chunking]
+        ST -->|markdown| SMC
+    end
+    subgraph "Chunk Generation"
+        SC --> GV[Chunk Validation]
+        SMC --> GV
+        FC --> GV
+        GV --> CD[Deduplication]
+        CD --> STORE[Save Chunks<br/>uploads/chunks/{id}.json]
+    end
+    subgraph "Retrieval"
+        GL[GET /chunks] --> LP[List Chunk Previews]
+        GC[GET /chunks/{id}] --> RC[Return Full Chunk]
+        GS[GET /chunks/statistics] --> RS[Return Statistics]
+    end
+    subgraph "Cleanup"
+        DL[Document Delete] --> CF[Chunk File Removed]
+    end
+```
+
+## Strategy Selection Logic
+
+| Document Type | Strategy | Rationale |
+|---------------|----------|-----------|
+| research_paper | Section | Respects IMRaD structure |
+| resume | Section | Education, Experience, Skills are distinct |
+| book | Section | Chapter boundaries are semantic |
+| report | Section | Executive Summary, Findings, etc. |
+| invoice | Section | Logical sections |
+| presentation | Section | Slide groupings |
+| manual | Section | Installation, Usage, Troubleshooting |
+| article | Section | Introduction, sections |
+| notes | Semantic | Paragraphs, lists, code blocks |
+| txt (no type) | Fixed | No structure to detect |
+| markdown | Semantic | Rich structure (headings, lists, code) |
+| unknown | Fixed | Best-effort fallback |
+
+## Chunk Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| chunk_id | UUID | Unique identifier |
+| document_id | UUID | Parent document |
+| section_name | str | Source section or "body" |
+| text | str | Chunk content |
+| chunk_index | int | Position in document (0-based) |
+| page_start | int | Estimated start page |
+| page_end | int | Estimated end page |
+| start_offset | int | Character offset in source |
+| end_offset | int | End character offset |
+| word_count | int | Word count |
+| character_count | int | Character count |
+| estimated_tokens | int | `word_count * 1.3` heuristic |
+| overlap_previous | str | Tail of previous chunk (context) |
+| overlap_next | str | Head of next chunk (context) |
+| metadata | dict | Extra metadata |
+
+## Chunk Validation Rules
+
+- **Empty chunks**: Rejected
+- **Whitespace only**: Rejected
+- **Duplicate content**: Deduplicated
+- **Fewer than 30 words**: Rejected (unless short section)
+- **More than 1000 words**: Rejected
+- All rejections are logged with reason
+
+## Chunk Statistics
+
+```json
+{
+  "document_id": "550e8400-...",
+  "chunks": 42,
+  "average_chunk_size": 480,
+  "largest_chunk": 620,
+  "smallest_chunk": 92,
+  "strategy": "section"
+}
+```
+
 ## Service Responsibilities
 
 | Service | Responsibility |
@@ -206,7 +305,7 @@ User Input
 | PipelineService | Wraps AIPipeline, validates input |
 | HistoryService | Manages conversation history with sliding window |
 | LoggingService | Handles sentiment log file writes |
-| DocumentService | Manages document upload, validation, storage, extraction, content preview, deletion |
+| DocumentService | Manages document upload, validation, storage, extraction, content preview, chunking, deletion |
 | PDFLoader | Extracts text from PDF using PyMuPDF (fitz) — handles encrypted, corrupted, scanned |
 | DOCXLoader | Extracts text from DOCX using python-docx — paragraphs + tables |
 | TXTLoader | Extracts text from TXT with multi-encoding support (UTF-8, UTF-16, Latin-1) |
@@ -216,3 +315,7 @@ User Input
 | SectionParser | Extracts logical sections (Introduction, Methodology, Chapter 1, etc.) with offsets and page estimates |
 | MetadataExtractor | Extracts title, author, dates, URLs, emails, phone numbers, tables, images, code blocks from content |
 | DocumentAnalyzer | Orchestrates full document intelligence pipeline — classification, section parsing, keyword extraction, summary, reading time, language detection |
+| ChunkEngine | Orchestrates the chunking pipeline — strategy selection, chunk generation, validation, deduplication, statistics |
+| FixedChunker | Splits text into fixed-size word windows with configurable overlap |
+| SectionChunker | Respects document section boundaries; never splits across sections |
+| SemanticChunker | Splits on paragraphs, headings, tables, code blocks, bullet lists; avoids cutting sentences |

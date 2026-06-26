@@ -100,3 +100,54 @@ class ExtractionError(BaseModel):
     document_id: str
     status: str
     message: str
+
+
+class ChunkPreview(BaseModel):
+    chunk_id: str
+    section_name: str
+    chunk_index: int
+    word_count: int
+    character_count: int
+    estimated_tokens: int
+    page_start: int
+    page_end: int
+    preview: str
+
+
+class ChunkResponse(BaseModel):
+    status: str
+    strategy: str
+    chunk_count: int
+
+
+class ChunkDetailResponse(BaseModel):
+    chunk_id: str
+    document_id: str
+    section_name: str
+    chunk_index: int
+    page_start: int
+    page_end: int
+    start_offset: int
+    end_offset: int
+    word_count: int
+    character_count: int
+    estimated_tokens: int
+    overlap_previous: str
+    overlap_next: str
+    text: str
+    metadata: dict
+
+
+class ChunkListResponse(BaseModel):
+    document_id: str
+    chunks: List[ChunkPreview]
+    statistics: Optional[dict] = None
+
+
+class ChunkStatisticsResponse(BaseModel):
+    document_id: str
+    chunks: int
+    average_chunk_size: float
+    largest_chunk: int
+    smallest_chunk: int
+    strategy: str

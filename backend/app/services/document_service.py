@@ -22,6 +22,8 @@ from ai.documents.pdf_loader import PDFLoader
 from ai.documents.docx_loader import DOCXLoader
 from ai.documents.txt_loader import TXTLoader
 from ai.documents.markdown_loader import MarkdownLoader
+from ai.chunking.chunk_engine import ChunkEngine
+from ai.chunking.chunk_models import ChunkStatistics
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +57,9 @@ class DocumentService:
         self._metadata_path = self._upload_dir / "metadata.json"
         self._extracted_dir = self._upload_dir / "extracted"
         self._analysis_dir = self._upload_dir / "analysis"
+        self._chunks_dir = self._upload_dir / "chunks"
         self._analyzer = analyzer
+        self._chunk_engine = ChunkEngine()
         self._metadata: Dict[str, DocumentMetadata] = {}
         self._loaders: Dict[FileType, object] = {
             FileType.pdf: PDFLoader(),
@@ -72,6 +76,7 @@ class DocumentService:
             (self._upload_dir / ft.value).mkdir(parents=True, exist_ok=True)
         self._extracted_dir.mkdir(parents=True, exist_ok=True)
         self._analysis_dir.mkdir(parents=True, exist_ok=True)
+        self._chunks_dir.mkdir(parents=True, exist_ok=True)
 
     def _load_metadata(self) -> None:
         path = self._metadata_path
@@ -229,6 +234,13 @@ class DocumentService:
                 analysis_path.unlink()
             except OSError as e:
                 logger.error("Delete failed (analysis file removal error): %s", e)
+
+        chunks_path = self._chunks_path(document_id)
+        if chunks_path.exists():
+            try:
+                chunks_path.unlink()
+            except OSError as e:
+                logger.error("Delete failed (chunks file removal error): %s", e)
 
         del self._metadata[document_id]
         self._save_metadata()
@@ -456,3 +468,102 @@ class DocumentService:
         except Exception as e:
             logger.error("Failed to save analysis: %s", e)
             raise DocumentExtractionError("Failed to save analysis", status_code=500)
+
+    def _chunks_path(self, document_id: str) -> Path:
+        return self._chunks_dir / f"{document_id}.json"
+
+    def chunk_document(self, document_id: str) -> dict:
+        meta = self._metadata.get(document_id)
+        if meta is None:
+            raise DocumentExtractionError("Document not found", status_code=404)
+
+        extracted = self._load_extracted(document_id)
+        if extracted is None:
+            raise DocumentExtractionError(
+                "Document must be extracted before chunking",
+                status_code=400,
+            )
+
+        full_text = extracted.text
+        analysis = self.get_analysis(document_id)
+        document_type = "unknown"
+        sections = None
+
+        if analysis:
+            document_type = analysis.get("document_type", "unknown")
+            sections = analysis.get("sections")
+
+        result = self._chunk_engine.chunk_document(
+            document_id=document_id,
+            text=full_text,
+            document_type=document_type,
+            file_type=meta.file_type.value,
+            sections=sections,
+        )
+
+        self._save_chunks(document_id, result)
+        return result
+
+    def _save_chunks(self, document_id: str, result: dict) -> None:
+        path = self._chunks_path(document_id)
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(result, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            logger.error("Failed to save chunks: %s", e)
+            raise DocumentExtractionError("Failed to save chunks", status_code=500)
+
+    def _load_chunks_data(self, document_id: str) -> Optional[dict]:
+        path = self._chunks_path(document_id)
+        if not path.exists():
+            return None
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            logger.error("Failed to load chunks: %s", e)
+            return None
+
+    def is_chunked(self, document_id: str) -> bool:
+        return self._chunks_path(document_id).exists()
+
+    def get_chunks_preview(self, document_id: str) -> Optional[list]:
+        data = self._load_chunks_data(document_id)
+        if data is None:
+            return None
+
+        previews = []
+        for c in data.get("chunks", []):
+            preview_text = c["text"][:120]
+            if len(c["text"]) > 120:
+                preview_text += "..."
+            previews.append({
+                "chunk_id": c["chunk_id"],
+                "section_name": c["section_name"],
+                "chunk_index": c["chunk_index"],
+                "word_count": c["word_count"],
+                "character_count": c["character_count"],
+                "estimated_tokens": c["estimated_tokens"],
+                "page_start": c["page_start"],
+                "page_end": c["page_end"],
+                "preview": preview_text,
+            })
+
+        return previews
+
+    def get_chunk(self, document_id: str, chunk_id: str) -> Optional[dict]:
+        data = self._load_chunks_data(document_id)
+        if data is None:
+            return None
+
+        for c in data.get("chunks", []):
+            if c["chunk_id"] == chunk_id:
+                return c
+
+        return None
+
+    def get_chunk_statistics(self, document_id: str) -> Optional[dict]:
+        data = self._load_chunks_data(document_id)
+        if data is None:
+            return None
+        return data.get("statistics")
