@@ -12,6 +12,7 @@ from .toxicity_service import ToxicityService
 from .threat_service import ThreatService
 from .intent_service import IntentService
 from .pipeline_service import PipelineService
+from .document_service import DocumentService
 from ai.sentiment.model import SentimentModel
 from ai.language.detector import LanguageDetector
 from ai.emotion.detector import EmotionDetector
@@ -78,7 +79,11 @@ def init_services() -> None:
     )
     pipeline_service = PipelineService(ai_pipeline)
 
+    logger.info("Initializing DocumentService")
+    document_service = DocumentService(settings.UPLOAD_DIR)
+
     _services = {
+        "document": document_service,
         "sentiment": sentiment_service,
         "language": language_service,
         "prompt": prompt_service,

@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .api.routes import router
+from .api.document_routes import router as document_router
 from .services import init_services
 
 logging.basicConfig(level=logging.INFO)
@@ -34,3 +35,4 @@ app.add_middleware(
 )
 
 app.include_router(router, prefix="/api/v1")
+app.include_router(document_router, prefix="/api/v1")

@@ -14,6 +14,7 @@ A production-ready multilingual chatbot that detects user sentiment, emotion, to
 - **AI Pipeline**: End-to-end pipeline combining all detection modules with LLM response generation
 - **Multilingual Responses**: LLM-powered responses in the detected or selected language
 - **Chat History**: In-memory conversation history with sliding window
+- **Document Management**: Upload, validate, list, and delete PDF, DOCX, TXT, and Markdown files with MIME validation and size enforcement
 
 ## Architecture
 
@@ -36,7 +37,8 @@ A production-ready multilingual chatbot that detects user sentiment, emotion, to
 │   ├── intent/         # Intent classifier (zero-shot)
 │   └── pipeline/       # AI pipeline orchestrator & shared classifier
 ├── prompts/            # Externalized prompt templates
-├── tests/              # Unit tests
+├── uploads/            # Document storage (auto-created per file type)
+├── tests/              # Unit tests (133+)
 └── docs/               # Documentation
 ```
 

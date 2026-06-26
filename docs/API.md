@@ -110,6 +110,91 @@ Health check endpoint.
 }
 ```
 
+## Document Management
+
+### POST /documents/upload
+
+Upload a document. Accepted types: PDF, DOCX, TXT, Markdown (.md).
+
+Maximum file size: 20 MB.
+
+**Request:** `multipart/form-data` with field `file`
+
+**Response (201):**
+```json
+{
+  "document_id": "550e8400-e29b-41d4-a716-446655440000",
+  "filename": "report.pdf",
+  "file_type": "pdf",
+  "size": 123456,
+  "status": "uploaded"
+}
+```
+
+**Errors:**
+- `400` — Unsupported file type
+- `400` — Invalid file content (MIME mismatch)
+- `400` — File exceeds maximum size
+- `400` — Invalid filename
+
+### GET /documents
+
+List all uploaded documents (sorted by upload time, newest first).
+
+**Response:**
+```json
+{
+  "documents": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "filename": "report.pdf",
+      "file_type": "pdf",
+      "size": 123456,
+      "upload_time": "2026-06-26T17:00:00Z"
+    }
+  ],
+  "count": 1
+}
+```
+
+### GET /documents/{id}
+
+Get metadata for a single document.
+
+**Response:**
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "filename": "report.pdf",
+  "file_type": "pdf",
+  "size": 123456,
+  "status": "uploaded",
+  "upload_time": "2026-06-26T17:00:00Z",
+  "storage_path": "uploads/pdf/550e8400-....pdf"
+}
+```
+
+**Errors:**
+- `404` — Document not found
+
+### DELETE /documents/{id}
+
+Delete a document (metadata and file removed from disk).
+
+**Response:**
+```json
+{
+  "status": "deleted",
+  "document_id": "550e8400-e29b-41d4-a716-446655440000",
+  "message": "Document deleted successfully"
+}
+```
+
+**Errors:**
+- `404` — Document not found
+
+---
+
 ### POST /feedback
 
 Submit feedback on a response.

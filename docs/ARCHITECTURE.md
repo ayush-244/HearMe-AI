@@ -23,6 +23,7 @@ graph TD
         THS[ThreatService]
         IS[IntentService]
         PLS[PipelineService]
+        DS[DocumentService]
     end
     subgraph "AI Models"
         SM[SentimentModel<br/>RoBERTa]
@@ -142,3 +143,4 @@ User Input
 | PipelineService | Wraps AIPipeline, validates input |
 | HistoryService | Manages conversation history with sliding window |
 | LoggingService | Handles sentiment log file writes |
+| DocumentService | Manages document upload, validation, storage, listing, deletion |
