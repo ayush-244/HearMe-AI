@@ -16,6 +16,7 @@ A production-ready multilingual chatbot that detects user sentiment, emotion, to
 - **Chat History**: In-memory conversation history with sliding window
 - **Document Management**: Upload, validate, list, and delete PDF, DOCX, TXT, and Markdown files with MIME validation and size enforcement
 - **Text Extraction**: Extract, normalize, and store text content from PDF (PyMuPDF), DOCX (python-docx), TXT (multi-encoding), and Markdown files with preview generation
+- **Document Intelligence**: Analyze document structure without LLMs — classify document type (research paper, resume, book, etc.), extract logical sections, detect tables/images/code/URLs/emails, extract keywords (lightweight RAKE-like), estimate reading time, generate summary preview, and detect language
 
 ## Architecture
 
@@ -36,10 +37,15 @@ A production-ready multilingual chatbot that detects user sentiment, emotion, to
 │   ├── toxicity/       # Toxicity detector (zero-shot)
 │   ├── threat/         # Threat detector (zero-shot)
 │   ├── intent/         # Intent classifier (zero-shot)
-│   └── pipeline/       # AI pipeline orchestrator & shared classifier
+│   ├── pipeline/       # AI pipeline orchestrator & shared classifier
+│   └── documents/      # Document processing
+│       ├── analyzer.py           # Document intelligence orchestrator
+│       ├── document_classifier.py# Heuristic document type classification
+│       ├── section_parser.py     # Logical section extraction
+│       └── metadata_extractor.py # Rich metadata extraction
 ├── prompts/            # Externalized prompt templates
 ├── uploads/            # Document storage (auto-created per file type)
-├── tests/              # Unit tests (133+)
+├── tests/              # Unit tests (259+)
 └── docs/               # Documentation
 ```
 

@@ -14,8 +14,10 @@ from ..schemas.document import (
     DeleteResponse,
     ExtractionResponse,
     ContentResponse,
+    AnalysisResponse,
 )
 from ai.documents.common import ExtractedDocument, DocumentNormalizer
+from ai.documents.analyzer import DocumentAnalyzer
 from ai.documents.pdf_loader import PDFLoader
 from ai.documents.docx_loader import DOCXLoader
 from ai.documents.txt_loader import TXTLoader
@@ -48,10 +50,12 @@ class DocumentExtractionError(Exception):
 
 
 class DocumentService:
-    def __init__(self, upload_dir: Path):
+    def __init__(self, upload_dir: Path, analyzer: Optional[DocumentAnalyzer] = None):
         self._upload_dir = Path(upload_dir)
         self._metadata_path = self._upload_dir / "metadata.json"
         self._extracted_dir = self._upload_dir / "extracted"
+        self._analysis_dir = self._upload_dir / "analysis"
+        self._analyzer = analyzer
         self._metadata: Dict[str, DocumentMetadata] = {}
         self._loaders: Dict[FileType, object] = {
             FileType.pdf: PDFLoader(),
@@ -67,6 +71,7 @@ class DocumentService:
         for ft in FileType:
             (self._upload_dir / ft.value).mkdir(parents=True, exist_ok=True)
         self._extracted_dir.mkdir(parents=True, exist_ok=True)
+        self._analysis_dir.mkdir(parents=True, exist_ok=True)
 
     def _load_metadata(self) -> None:
         path = self._metadata_path
@@ -218,6 +223,13 @@ class DocumentService:
             except OSError as e:
                 logger.error("Delete failed (extracted file removal error): %s", e)
 
+        analysis_path = self._analysis_path(document_id)
+        if analysis_path.exists():
+            try:
+                analysis_path.unlink()
+            except OSError as e:
+                logger.error("Delete failed (analysis file removal error): %s", e)
+
         del self._metadata[document_id]
         self._save_metadata()
 
@@ -353,3 +365,94 @@ class DocumentService:
         except Exception as e:
             logger.error("Failed to load extracted content: %s", e)
             return None
+
+    def _analysis_path(self, document_id: str) -> Path:
+        return self._analysis_dir / f"{document_id}.json"
+
+    def _get_language_service(self):
+        try:
+            from . import get_services
+            services = get_services()
+            return services.get("language")
+        except Exception:
+            return None
+
+    def analyze_document(self, document_id: str) -> AnalysisResponse:
+        meta = self._metadata.get(document_id)
+        if meta is None:
+            raise DocumentExtractionError("Document not found", status_code=404)
+
+        extracted = self._load_extracted(document_id)
+        if extracted is None:
+            raise DocumentExtractionError(
+                "Document must be extracted before analysis",
+                status_code=400,
+            )
+
+        if self._analyzer is None:
+            logger.info("Initializing DocumentAnalyzer for analysis")
+            self._analyzer = DocumentAnalyzer()
+
+        logger.info("Analysis started: id=%s, filename=%s", document_id, meta.filename)
+
+        language_service = self._get_language_service()
+        analysis = self._analyzer.analyze(
+            document_id=document_id,
+            text=extracted.text,
+            filename=meta.filename,
+            file_metadata=extracted.metadata or {},
+            pages=extracted.pages,
+            language_service=language_service,
+        )
+
+        self._save_analysis(document_id, analysis)
+
+        logger.info("Analysis completed: id=%s, type=%s", document_id, analysis["document_type"])
+
+        return AnalysisResponse(
+            status="analyzed",
+            document_id=document_id,
+            document_type=analysis["document_type"],
+            classification_confidence=analysis["classification_confidence"],
+            language=analysis["language"],
+            language_code=analysis["language_code"],
+            page_count=analysis["page_count"],
+            word_count=analysis["word_count"],
+            character_count=analysis["character_count"],
+            reading_time=analysis["estimated_reading_time_minutes"],
+            sections=analysis["sections"],
+            contains_tables=analysis["contains_tables"],
+            contains_images=analysis["contains_images"],
+            contains_code_blocks=analysis["contains_code_blocks"],
+            contains_urls=analysis["contains_urls"],
+            contains_emails=analysis["contains_emails"],
+            contains_phone_numbers=analysis["contains_phone_numbers"],
+            contains_dates=analysis["contains_dates"],
+            keywords=analysis["keywords"],
+            summary_preview=analysis["summary_preview"],
+            extracted_metadata=analysis["extracted_metadata"],
+            created_at=analysis["created_at"],
+        )
+
+    def get_analysis(self, document_id: str) -> Optional[dict]:
+        path = self._analysis_path(document_id)
+        if not path.exists():
+            return None
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            logger.error("Failed to load analysis: %s", e)
+            return None
+
+    def is_analyzed(self, document_id: str) -> bool:
+        return self._analysis_path(document_id).exists()
+
+    def _save_analysis(self, document_id: str, analysis: dict) -> None:
+        path = self._analysis_path(document_id)
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(analysis, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            logger.error("Failed to save analysis: %s", e)
+            raise DocumentExtractionError("Failed to save analysis", status_code=500)

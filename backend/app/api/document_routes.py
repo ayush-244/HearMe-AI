@@ -9,6 +9,7 @@ from ..schemas.document import (
     DeleteResponse,
     ExtractionResponse,
     ContentResponse,
+    AnalysisResponse,
 )
 from ..services import get_services
 from ..services.document_service import DocumentValidationError, DocumentExtractionError
@@ -103,3 +104,40 @@ async def get_document_content(document_id: str):
     except DocumentExtractionError as e:
         logger.warning("/documents/{id}/content error: %s — %s", document_id, e.message)
         raise HTTPException(status_code=e.status_code, detail=e.message)
+
+
+@router.post("/documents/{document_id}/analyze", response_model=AnalysisResponse)
+async def analyze_document(document_id: str):
+    services = get_services()
+    doc_service = services["document"]
+
+    logger.info("/documents/{id}/analyze request: id=%s", document_id)
+
+    try:
+        result = doc_service.analyze_document(document_id)
+        logger.info(
+            "/documents/{id}/analyze success: type=%s, sections=%d, keywords=%d",
+            document_id, result.document_type, len(result.sections), len(result.keywords),
+        )
+        return result
+    except DocumentExtractionError as e:
+        logger.warning("/documents/{id}/analyze error: %s — %s", document_id, e.message)
+        raise HTTPException(status_code=e.status_code, detail=e.message)
+
+
+@router.get("/documents/{document_id}/analysis")
+async def get_document_analysis(document_id: str):
+    services = get_services()
+    doc_service = services["document"]
+
+    logger.info("/documents/{id}/analysis GET request: id=%s", document_id)
+
+    analysis = doc_service.get_analysis(document_id)
+    if analysis is None:
+        meta = doc_service.get_metadata(document_id)
+        if meta is None:
+            raise HTTPException(status_code=404, detail="Document not found")
+        raise HTTPException(status_code=404, detail="Analysis not found. Run analysis first.")
+
+    logger.info("/documents/{id}/analysis retrieved", document_id)
+    return analysis

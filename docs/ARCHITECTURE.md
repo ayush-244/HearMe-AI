@@ -100,6 +100,41 @@ graph TD
     end
 ```
 
+## Document Intelligence Pipeline
+
+```mermaid
+graph TD
+    subgraph "Analysis Trigger"
+        A[POST /documents/{id}/analyze] --> AE{Already Extracted?}
+        AE -->|No| ER[Error: Extract First]
+        AE -->|Yes| AI[DocumentAnalyzer]
+    end
+    subgraph "Document Intelligence"
+        AI --> CL[DocumentClassifier<br/>Heuristic Type Detection]
+        AI --> SE[SectionParser<br/>Logical Section Extraction]
+        AI --> ME[MetadataExtractor<br/>Title, Author, URLs, etc.]
+        AI --> KE[Keyword Extractor<br/>Lightweight RAKE-like]
+        AI --> SU[Summary Preview<br/>First Meaningful Paragraphs]
+        AI --> RT[Reading Time Estimator<br/>words / 220 WPM]
+        AI --> LD[Language Detection<br/>Reuses LanguageService]
+    end
+    subgraph "Output"
+        CL --> OT["document_type: research_paper<br/>confidence: 15.0"]
+        SE --> OS["sections: [Introduction,<br/>Methodology, Results...]"]
+        ME --> OM["title, author, dates<br/>contains_urls, contains_tables..."]
+        KE --> OK["keywords: [nlp,<br/>transformer, deep learning]"]
+        SU --> OP["summary_preview: (max 500 chars)"]
+        RT --> OR["reading_time: 18 min"]
+        LD --> OL["language: English"]
+    end
+    subgraph "Storage"
+        SA[Save Analysis<br/>uploads/analysis/{id}.json]
+        SR["Return AnalysisResponse<br/>(status, type, sections, keywords, ...)"]
+    end
+    OT & OS & OM & OK & OP & OR & OL --> SA
+    SA --> SR
+```
+
 ## AI Pipeline Data Flow
 
 ```mermaid
@@ -177,3 +212,7 @@ User Input
 | TXTLoader | Extracts text from TXT with multi-encoding support (UTF-8, UTF-16, Latin-1) |
 | MarkdownLoader | Extracts plain text from Markdown — strips syntax, keeps content |
 | DocumentNormalizer | Normalizes Unicode, line endings, whitespace; generates previews |
+| DocumentClassifier | Heuristic document type classification (research_paper, resume, book, etc.) without LLM |
+| SectionParser | Extracts logical sections (Introduction, Methodology, Chapter 1, etc.) with offsets and page estimates |
+| MetadataExtractor | Extracts title, author, dates, URLs, emails, phone numbers, tables, images, code blocks from content |
+| DocumentAnalyzer | Orchestrates full document intelligence pipeline — classification, section parsing, keyword extraction, summary, reading time, language detection |

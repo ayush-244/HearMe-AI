@@ -245,6 +245,77 @@ Returns preview only (first ~500 chars). Does not return full text by default.
 **Errors:**
 - `404` — Document not found
 
+### POST /documents/{id}/analyze
+
+Analyze an extracted document to generate rich metadata (classification, sections, keywords, etc.).
+
+Document must be extracted first via `POST /documents/{id}/extract`.
+
+**Response:**
+```json
+{
+  "status": "analyzed",
+  "document_id": "550e8400-e29b-41d4-a716-446655440000",
+  "document_type": "research_paper",
+  "classification_confidence": 15.0,
+  "language": "English",
+  "language_code": "en",
+  "page_count": 10,
+  "word_count": 4521,
+  "character_count": 28450,
+  "reading_time": 21,
+  "sections": [
+    {
+      "name": "Abstract",
+      "start_offset": 0,
+      "end_offset": 150,
+      "estimated_page": 1
+    },
+    {
+      "name": "Introduction",
+      "start_offset": 151,
+      "end_offset": 450,
+      "estimated_page": 1
+    }
+  ],
+  "contains_tables": false,
+  "contains_images": false,
+  "contains_code_blocks": false,
+  "contains_urls": true,
+  "contains_emails": false,
+  "contains_phone_numbers": false,
+  "contains_dates": true,
+  "keywords": [
+    "natural language",
+    "deep learning",
+    "neural network",
+    "transformer",
+    "attention mechanism"
+  ],
+  "summary_preview": "This paper presents a novel approach to natural language processing using transformer architectures...",
+  "extracted_metadata": {
+    "title": "A Novel Approach to NLP",
+    "author": "Dr. Sarah Johnson",
+    "creation_date": "2026-01-15T10:00:00",
+    "modification_date": "2026-06-01T14:30:00"
+  },
+  "created_at": "2026-06-26T17:00:00"
+}
+```
+
+**Errors:**
+- `400` — Document not extracted yet (extract first)
+- `404` — Document not found
+
+### GET /documents/{id}/analysis
+
+Retrieve stored analysis for a document. Analysis persists on disk.
+
+**Response:** Same schema as the analyze endpoint response above.
+
+**Errors:**
+- `404` — Document not found or analysis not yet generated
+
 ---
 
 ### POST /feedback

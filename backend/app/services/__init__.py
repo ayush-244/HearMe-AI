@@ -80,7 +80,9 @@ def init_services() -> None:
     pipeline_service = PipelineService(ai_pipeline)
 
     logger.info("Initializing DocumentService")
-    document_service = DocumentService(settings.UPLOAD_DIR)
+    from ai.documents.analyzer import DocumentAnalyzer
+    document_analyzer = DocumentAnalyzer()
+    document_service = DocumentService(settings.UPLOAD_DIR, analyzer=document_analyzer)
 
     _services = {
         "document": document_service,

@@ -71,6 +71,31 @@ class ContentResponse(BaseModel):
     extracted: bool
 
 
+class AnalysisResponse(BaseModel):
+    status: str
+    document_id: str
+    document_type: str
+    classification_confidence: float
+    language: str
+    language_code: str
+    page_count: int
+    word_count: int
+    character_count: int
+    reading_time: int
+    sections: List[dict]
+    contains_tables: bool
+    contains_images: bool
+    contains_code_blocks: bool
+    contains_urls: bool
+    contains_emails: bool
+    contains_phone_numbers: bool
+    contains_dates: bool
+    keywords: List[str]
+    summary_preview: str
+    extracted_metadata: dict
+    created_at: str
+
+
 class ExtractionError(BaseModel):
     document_id: str
     status: str
