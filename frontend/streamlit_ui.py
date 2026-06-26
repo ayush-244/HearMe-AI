@@ -2,54 +2,34 @@ import streamlit as st
 import logging
 from typing import Dict, List
 
-from backend.app.config.settings import Settings
-from backend.app.services.sentiment_service import SentimentService
-from backend.app.services.language_service import LanguageService
-from backend.app.services.prompt_service import PromptService
-from backend.app.services.chat_service import ChatService
-from backend.app.services.history_service import HistoryService
-from backend.app.services.logging_service import LoggingService
-from ai.sentiment.model import SentimentModel
-from ai.language.detector import LanguageDetector
-from langchain_groq import ChatGroq
+from .api_client import APIClient, APIClientError
+from .config import LANGUAGES
 
 logger = logging.getLogger(__name__)
 
 
 @st.cache_resource
-def _init_services():
-    settings = Settings()
-
-    sentiment_model = SentimentModel(settings.sentiment_model_name, settings.hf_token)
-    sentiment_service = SentimentService(sentiment_model)
-
-    language_detector = LanguageDetector()
-    prompt_service = PromptService(settings.PROMPTS_DIR)
-    language_service = LanguageService(language_detector, prompt_service.language_configs)
-
-    llm = ChatGroq(
-        groq_api_key=settings.groq_api_key,
-        model_name=settings.llm_model_name,
-    )
-    chat_service = ChatService(llm, prompt_service)
-
-    history_service = HistoryService(settings.max_history_messages)
-    logging_service = LoggingService(settings.sentiment_log_file)
-
-    return {
-        "settings": settings,
-        "sentiment": sentiment_service,
-        "language": language_service,
-        "prompt": prompt_service,
-        "chat": chat_service,
-        "history": history_service,
-        "logging": logging_service,
-    }
+def _get_api_client() -> APIClient:
+    return APIClient()
 
 
 def _init_session_state():
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
+    if "backend_online" not in st.session_state:
+        st.session_state.backend_online = True
+    if "error_message" not in st.session_state:
+        st.session_state.error_message = None
+
+
+def _check_backend_health(api: APIClient) -> bool:
+    if not api.health():
+        st.session_state.backend_online = False
+        st.session_state.error_message = "Backend server is offline. Please start the backend and refresh."
+    else:
+        st.session_state.backend_online = True
+        st.session_state.error_message = None
+    return st.session_state.backend_online
 
 
 def display_chat_history(history: List[Dict[str, str]]):
@@ -60,18 +40,22 @@ def display_chat_history(history: List[Dict[str, str]]):
 
 def run():
     _init_session_state()
-    svc = _init_services()
+    api = _get_api_client()
 
-    st.title("🌐 Multilingual Sentiment-Aware Chatbot")
+    st.title("Multilingual Sentiment-Aware Chatbot")
+
+    _check_backend_health(api)
+    backend_ok = st.session_state.backend_online
 
     with st.sidebar:
         st.header("Language Settings")
+        language_options = ["auto"] + list(LANGUAGES.keys())
         selected_language = st.selectbox(
             "Choose Language (or detect automatically)",
-            options=["auto"] + list(svc["prompt"].language_configs.keys()),
+            options=language_options,
             format_func=lambda x: "Detect Automatically"
             if x == "auto"
-            else svc["prompt"].language_configs[x]["name"],
+            else LANGUAGES.get(x, x),
         )
 
         if st.button("Clear Chat History"):
@@ -80,54 +64,70 @@ def run():
 
         log_sentiment = st.checkbox("Log Sentiment Analysis", value=False)
 
+        if not backend_ok:
+            st.error("Backend server is offline.\n\nStart the backend with:\n`uvicorn backend.app.main:app --reload`")
+            if st.button("Retry Connection"):
+                if _check_backend_health(api):
+                    st.rerun()
+
     display_chat_history(st.session_state.chat_history)
 
-    user_input = st.chat_input("Enter your message")
+    user_input = st.chat_input("Enter your message", disabled=not backend_ok)
 
-    if user_input:
-        detected_lang = svc["language"].detect(user_input)
-        language_to_use = detected_lang if selected_language == "auto" else selected_language
-
-        if language_to_use not in svc["prompt"].language_configs:
-            language_to_use = "en"
-
-        sentiment, confidence = svc["sentiment"].analyze(user_input)
-
-        if log_sentiment:
-            svc["logging"].log_sentiment(user_input, sentiment, confidence)
-            st.success("Sentiment analysis logged successfully!")
-
+    if user_input and backend_ok:
         with st.chat_message("user"):
             st.markdown(user_input)
 
+        with st.spinner("Analyzing message..."):
+            try:
+                chat_result = api.chat(
+                    message=user_input,
+                    language=selected_language,
+                    history=st.session_state.chat_history,
+                )
+            except APIClientError as e:
+                st.error(f"Request failed: {e}")
+                st.stop()
+            except Exception as e:
+                logger.exception("Unexpected error during chat request")
+                st.error("An unexpected error occurred. Please try again.")
+                st.stop()
+
+        reply = chat_result["reply"]
+        sentiment = chat_result["sentiment"]
+        confidence = chat_result["confidence"]
+        detected_language = chat_result["detected_language"]
+        language_name = chat_result["language_name"]
+
+        if log_sentiment:
+            try:
+                api.send_feedback(
+                    message_id=f"msg_{hash(user_input)}",
+                    rating=3,
+                    comment=f"Sentiment: {sentiment} ({confidence:.2%})",
+                )
+                st.success("Sentiment analysis logged successfully!")
+            except APIClientError:
+                logger.warning("Failed to log sentiment feedback")
+                st.warning("Could not log sentiment analysis.")
+
         with st.expander("Message Analysis", expanded=False):
-            st.write(f"🧠 Sentiment Detected: {sentiment}")
-            st.write(f"🎯 Confidence: {confidence:.2%}")
-            lang_name = svc["language"].get_language_name(language_to_use)
-            st.write(f"🌍 Language: {lang_name}")
+            st.write(f"Sentiment Detected: {sentiment}")
+            st.write(f"Confidence: {confidence:.2%}")
+            st.write(f"Language: {language_name}")
 
         try:
-            sentiment_intro = svc["prompt"].select_intro(sentiment)
-
-            bot_response = svc["chat"].generate_response(
-                user_input=user_input,
-                language=language_to_use,
-                sentiment=sentiment,
-                history=st.session_state.chat_history,
-            )
-
-            st.session_state.chat_history = svc["history"].add_message(
-                st.session_state.chat_history, "user", user_input
-            )
-            st.session_state.chat_history = svc["history"].add_message(
-                st.session_state.chat_history, "assistant", bot_response
-            )
+            st.session_state.chat_history.append({"role": "user", "content": user_input})
+            st.session_state.chat_history.append({"role": "assistant", "content": reply})
+            if len(st.session_state.chat_history) > 20:
+                st.session_state.chat_history = st.session_state.chat_history[-20:]
 
             with st.chat_message("assistant"):
-                st.markdown(f"{sentiment_intro}\n\n{bot_response}")
+                st.markdown(reply)
 
         except Exception as e:
-            st.error(f"An error occurred while generating response: {e}")
+            logger.exception("Failed to update chat display")
+            st.error("An error occurred while rendering the response.")
 
 
 if __name__ == "__main__":
