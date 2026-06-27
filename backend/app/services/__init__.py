@@ -173,12 +173,50 @@ def init_services() -> None:
 
     logger.info("Search Engine initialized: BM25=%s", keyword_search._use_bm25)
 
+    from ..reasoning.context_builder import ContextBuilder
+    from ..reasoning.prompt_builder import PromptBuilder
+    from ..reasoning.citation_manager import CitationManager
+    from ..reasoning.response_validator import ResponseValidator
+    from ..reasoning.guardrails import Guardrails
+    from ..reasoning.reasoning_engine import ReasoningEngine
+
+    logger.info("Initializing Knowledge Reasoning Engine: max_chunks=%d, max_tokens=%d, history_limit=%d",
+                settings.reasoning_max_context_chunks, settings.reasoning_max_context_tokens,
+                settings.reasoning_conversation_history_limit)
+
+    context_builder = ContextBuilder(
+        max_tokens=settings.reasoning_max_context_tokens,
+        max_chunks=settings.reasoning_max_context_chunks,
+    )
+
+    prompt_builder = PromptBuilder(prompts_dir=settings.PROMPTS_DIR)
+
+    citation_manager = CitationManager(style=settings.reasoning_citation_style)
+
+    response_validator = ResponseValidator()
+
+    guardrails = Guardrails()
+
+    reasoning_engine = ReasoningEngine(
+        search_engine=search_engine,
+        chat_service=chat_service,
+        context_builder=context_builder,
+        prompt_builder=prompt_builder,
+        citation_manager=citation_manager,
+        response_validator=response_validator,
+        guardrails=guardrails,
+        settings=settings,
+    )
+
+    logger.info("Knowledge Reasoning Engine initialized")
+
     _services = {
         "document": document_service,
         "embedding": embedding_service,
         "embedding_with_store": embedding_service_with_store,
         "vector_store": vector_store,
         "search_engine": search_engine,
+        "reasoning_engine": reasoning_engine,
         "sentiment": sentiment_service,
         "language": language_service,
         "prompt": prompt_service,

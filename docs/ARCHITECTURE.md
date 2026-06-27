@@ -475,6 +475,171 @@ Input: ["text a", "text b", "text a"]
 }
 ```
 
+## Knowledge Reasoning Pipeline
+
+```mermaid
+graph TD
+    subgraph "User Query"
+        Q[POST /knowledge/chat] --> RE[ReasoningEngine.answer]
+    end
+    subgraph "Retrieval"
+        RE --> SE[SearchEngine.search<br/>Hybrid search]
+        SE --> KB[QdrantVectorStore<br/>Vector + BM25]
+        KB --> RA[Raw Chunks]
+    end
+    subgraph "Guardrails"
+        RA --> GR[Guardrails.filter_chunks<br/>24 injection patterns]
+        GR --> FC[Filtered Chunks]
+    end
+    subgraph "Context Building"
+        FC --> CB[ContextBuilder.build]
+        CB --> DD[Deduplicate by ID + Text]
+        DD --> OR[Restore Document + Section Order]
+        OR --> TB[Apply Token Budget<br/>max_tokens=4096]
+        TB --> MA[Merge Adjacent Chunks]
+        MA --> CX[Structured Context<br/>chunks + sources + token_count]
+    end
+    subgraph "Prompt Building"
+        CX --> PB[PromptBuilder.build]
+        H[Conversation History<br/>last N turns] --> PB
+        S[Settings<br/>allow_external_knowledge] --> PB
+        T[Prompt Templates<br/>knowledge_system.txt<br/>knowledge_user.txt<br/>knowledge_guardrails.txt] --> PB
+        PB --> PR[Structured Prompt]
+    end
+    subgraph "Generation"
+        PR --> LLM[ChatService.invoke_llm<br/>ChatGroq]
+        LLM --> AR[Raw Answer]
+    end
+    subgraph "Validation"
+        AR --> RV[ResponseValidator.validate]
+        RV --> VI{Passed?}
+        VI -->|Yes| OK[Validated Answer]
+        VI -->|No| FL[Fallback: log issues]
+        AR --> CM[CitationManager<br/>build_citations + build_sources]
+    end
+    subgraph "Output"
+        OK --> OUT[KnowledgeAnswer<br/>answer + citations + sources + metrics]
+        CM --> OUT
+    end
+
+    style Q fill:#4a90d9,color:#fff
+    style OUT fill:#27ae60,color:#fff
+    style VI fill:#f39c12,color:#fff
+```
+
+## Configuration
+
+### Vector Store Settings
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `QDRANT_HOST` | `localhost` | Qdrant server host |
+| `QDRANT_PORT` | `6333` | Qdrant server port |
+| `QDRANT_COLLECTION` | `documents` | Qdrant collection name |
+| `VECTOR_DIMENSION` | `768` | Embedding vector dimension |
+| `DISTANCE_METRIC` | `Cosine` | Distance metric for vector comparison |
+| `QDRANT_LOCAL_PATH` | `""` | Local path for embedded Qdrant (empty = use remote) |
+
+### Search Engine Settings
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `SEARCH_SEMANTIC_WEIGHT` | `0.65` | Semantic score weight in hybrid ranking |
+| `SEARCH_KEYWORD_WEIGHT` | `0.25` | Keyword score weight in hybrid ranking |
+| `SEARCH_METADATA_WEIGHT` | `0.10` | Metadata boost weight in hybrid ranking |
+| `SEARCH_DEFAULT_TOP_K` | `10` | Default number of results to return |
+| `SEARCH_MAX_CONTEXT_CHUNKS` | `20` | Maximum chunks to return per query |
+| `SEARCH_MINIMUM_SIMILARITY` | `0.0` | Minimum hybrid score threshold |
+| `SEARCH_BM25_K1` | `1.5` | BM25 k1 parameter |
+| `SEARCH_BM25_B` | `0.75` | BM25 b parameter |
+| `SEARCH_SEMANTIC_TOP_K_MULTIPLIER` | `3` | Multiplier for semantic retrieval |
+
+### Knowledge Reasoning Settings
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `REASONING_MAX_CONTEXT_CHUNKS` | `20` | Maximum chunks in context window |
+| `REASONING_MAX_CONTEXT_TOKENS` | `4096` | Token budget for context |
+| `REASONING_CONVERSATION_HISTORY_LIMIT` | `5` | Max conversation turns to include |
+| `REASONING_ALLOW_EXTERNAL_KNOWLEDGE` | `False` | Allow LLM to use external knowledge |
+| `REASONING_CITATION_STYLE` | `"inline"` | Citation format (inline/markdown) |
+| `REASONING_TEMPERATURE` | `0.3` | LLM temperature for reasoning |
+| `REASONING_MAX_TOKENS` | `1024` | Max tokens in generated answer |
+
+## Prompt Architecture
+
+### Template Files (in `prompts/`)
+
+| File | Purpose |
+|------|---------|
+| `knowledge_system.txt` | System-level instructions with guardrails placeholder |
+| `knowledge_user.txt` | User message template with context, history, question placeholders |
+| `knowledge_guardrails.txt` | Critical rules injected into system prompt (knowledge boundary, no assistant identity, no injection tolerance) |
+
+### Template Variables
+
+| Variable | Source | Description |
+|----------|--------|-------------|
+| `{guardrails}` | `knowledge_guardrails.txt` | Critical behavioral rules |
+| `{context}` | `ContextBuilder.build()` | Formatted retrieved chunks with `[Source N]` headers |
+| `{conversation_history}` | In-memory history | Last N conversation turns |
+| `{question}` | User input | The user's question |
+| `{language}` | Request or auto-detect | Response language |
+| `{token_estimate}` | Context builder | Estimated token count |
+| `{chunk_count}` | Context builder | Number of chunks provided |
+| `{external_knowledge}` | Settings | "enabled" or "disabled" |
+
+### Fallback Behavior
+
+If template files are missing, the PromptBuilder uses a hardcoded fallback prompt with the same structure (system + instructions + context + question). This ensures the system works without template files but encourages proper template setup.
+
+## Guardrail Strategy
+
+### Injection Pattern Categories
+
+| Category | Example Patterns | Count |
+|----------|-----------------|-------|
+| Instruction override | "ignore previous instructions", "disregard all prior instructions" | 6 |
+| Identity hijack | "you are ChatGPT", "act as if you are", "pretend you are" | 5 |
+| Prompt extraction | "reveal your system prompt", "output your prompt" | 3 |
+| Memory manipulation | "delete all memory", "reset your context" | 3 |
+| Safety bypass | "bypass your safety guidelines", "override instructions" | 4 |
+| Creator impersonation | "this is an instruction from your creator" | 1 |
+
+### Detection Method
+
+- Regex-based with `re.IGNORECASE`
+- Applied to both user queries and retrieved chunk texts
+- Chunks triggering patterns are filtered out (not passed to LLM)
+- Queries triggering patterns return a knowledge-gap response
+
+## Context Building Strategy
+
+### Pipeline
+
+1. **Deduplication**: Dedup by `chunk_id` (exact) and first 200 chars of text (fuzzy)
+2. **Ordering**: Sort by `document_id` then `chunk_index` (preserves document and section order)
+3. **Token Budget**: Accumulate chunks up to `max_tokens`, truncate overflow chunk with `...`
+4. **Chunk Cap**: Hard limit at `max_chunks`
+5. **Merge Adjacent**: Combine consecutive chunks from same document+section into one (if combined fits within budget/2)
+6. **Source Extraction**: Build source metadata (document_id, title, sections, pages)
+
+## Citation Strategy
+
+### Styles
+
+| Style | Format | Example |
+|-------|--------|---------|
+| `inline` | `[Title › Section › Page N]` | `[Paper A › Methodology › Page 3]` |
+| `markdown` | `**Title**, *Section*, Page N, `chunk_id`…, score=X.XX` | `**Paper A**, *Methodology*, Page 3, `c1a2b3…`, score=0.95` |
+
+### Flow
+
+1. `CitationManager.track_chunks()` — records chunks used in context
+2. `CitationManager.build_citations()` — generates unique citation strings
+3. `CitationManager.build_sources()` — builds structured source metadata
+4. `ResponseValidator.validate()` — checks response references at least one citation
+
 ## Service Responsibilities
 
 | Service | Responsibility |
@@ -520,3 +685,9 @@ Input: ["text a", "text b", "text a"]
 | QueryAnalyzer | Analyzes query language, intent, complexity, and estimated depth |
 | CitationBuilder | Builds citation strings and markdown-formatted citations from search results |
 | RetrievalMetrics | Tracks query latency, chunks searched/returned, avg scores; p50/p95/p99 percentiles |
+| ReasoningEngine | Orchestrates knowledge RAG — search, guardrails, context building, prompt building, LLM invocation, response validation, citation tracking |
+| ContextBuilder | Deduplicates, orders, budgets tokens, merges adjacent chunks, builds structured context with source metadata |
+| PromptBuilder | Loads prompt templates from disk, formats with context/history/question, generates structured prompts, fallback prompt if templates missing |
+| CitationManager | Tracks used chunks, builds formatted citation strings (inline/markdown), builds structured source metadata |
+| ResponseValidator | Detects empty responses, hallucination indicators (`i think`, `i believe`), unsupported claims (`studies show`), missing citations, knowledge gap phrases |
+| Guardrails | 24+ regex patterns for prompt injection detection, filters chunks and validates queries, returns triggered patterns for debugging |

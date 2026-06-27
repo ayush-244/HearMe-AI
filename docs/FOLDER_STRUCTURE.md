@@ -13,7 +13,8 @@
 │       │   ├── __init__.py
 │       │   ├── routes.py           # Chat, sentiment, analyze, health, feedback endpoints
 │       │   ├── document_routes.py  # Document upload, list, get, delete, extract, content
-│       │   └── search_routes.py   # Search endpoints (POST /search, GET /search/health)
+│       │   ├── search_routes.py   # Search endpoints (POST /search, GET /search/health)
+│       │   └── knowledge_routes.py # Knowledge chat endpoints (POST /knowledge/chat, GET /knowledge/health)
 │       ├── services/
 │       │   ├── __init__.py         # Service initialization & dependency injection
 │       │   ├── sentiment_service.py
@@ -40,6 +41,15 @@
 │       │   ├── hybrid_ranker.py     # Weighted hybrid ranking + dedup + diversity
 │       │   ├── citation_builder.py  # Citation string generation
 │       │   └── retrieval_metrics.py # Query latency tracking, percentiles
+│       ├── reasoning/
+│       │   ├── __init__.py
+│       │   ├── reasoning_engine.py  # Knowledge RAG orchestrator
+│       │   ├── context_builder.py   # Context dedup, ordering, token budgeting, merging
+│       │   ├── prompt_builder.py    # Template-driven prompt construction
+│       │   ├── citation_manager.py  # Citation tracking and formatting
+│       │   ├── response_validator.py # Hallucination + unsupported claim detection
+│       │   ├── guardrails.py        # Prompt injection detection (24+ patterns)
+│       │   └── answer_models.py     # KnowledgeQuery, KnowledgeAnswer, ConversationTurn
 │       ├── vectorstore/
 │       │   ├── __init__.py
 │       │   ├── base.py             # VectorStore ABC (interface)
@@ -51,7 +61,8 @@
 │       │   ├── __init__.py
 │       │   ├── chat.py             # Chat/analyze/sentiment/language Pydantic models
 │       │   ├── document.py         # Document metadata/upload/list/delete Pydantic models
-│       │   └── search.py           # SearchRequest, SearchResponse, SearchHealthResponse
+│       │   ├── search.py           # SearchRequest, SearchResponse, SearchHealthResponse
+│       │   └── knowledge.py        # KnowledgeChatRequest, KnowledgeChatResponse, KnowledgeHealthResponse
 │       ├── config/
 │       │   ├── __init__.py
 │       │   └── settings.py         # Pydantic Settings from .env (incl. Qdrant & search config)
@@ -122,7 +133,10 @@
 ├── prompts/
 │   ├── chat_template.txt           # Prompt template with placeholders
 │   ├── language_configs.json       # Language configurations
-│   └── sentiment_intros.json       # Sentiment-aware intro phrases
+│   ├── sentiment_intros.json       # Sentiment-aware intro phrases
+│   ├── knowledge_system.txt        # Knowledge reasoning system instructions
+│   ├── knowledge_user.txt          # Knowledge reasoning user message template
+│   └── knowledge_guardrails.txt    # Critical guardrail rules for knowledge LLM
 │
 ├── tests/
 │   ├── __init__.py
@@ -151,7 +165,8 @@
 │   ├── test_embedding_service.py  # Embedding service tests (40+ tests)
 │   ├── test_vectorstore.py        # Vector store unit tests (50 tests, mocked Qdrant)
 │   ├── test_vectorstore_integration.py  # Vector store integration tests (20 tests, real embedded Qdrant)
-│   └── test_retrieval.py          # Hybrid search engine tests (88 tests, mocked & integration)
+│   ├── test_retrieval.py          # Hybrid search engine tests (88 tests, mocked & integration)
+│   └── test_reasoning.py          # Knowledge reasoning engine tests (117 tests, mocked)
 │
 ├── docs/
 │   ├── ARCHITECTURE.md

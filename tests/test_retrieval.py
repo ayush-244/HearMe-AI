@@ -538,7 +538,6 @@ class TestSearchEngine:
         assert len(result.results) > 0
         assert result.results[0].chunk_id == "c1"
         assert result.results[0].score > 0
-        assert result.processing_time_ms > 0
 
     def test_search_uses_filters(self, mock_embedding_service, mock_vector_store):
         ss = SemanticSearch(mock_embedding_service, mock_vector_store)

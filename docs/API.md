@@ -395,6 +395,106 @@ Deleting a document also removes its embeddings (handled automatically).
 
 ---
 
+## Knowledge Reasoning
+
+### POST /knowledge/chat
+
+Ask a question and get a grounded, citation-backed answer from uploaded documents. Uses hybrid search to retrieve relevant chunks, builds a structured prompt from templates, invokes the LLM, validates the response, and returns citations.
+
+**Request:**
+```json
+{
+  "question": "Explain transformer architecture.",
+  "workspace_id": "default",
+  "conversation_id": "",
+  "top_k": 10,
+  "min_score": 0.0,
+  "language": null,
+  "document_type": null,
+  "document_ids": null,
+  "filters": {}
+}
+```
+
+**Parameters:**
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `question` | string | required | User question |
+| `workspace_id` | string | `"default"` | Workspace scope |
+| `conversation_id` | string | `""` | ID for multi-turn conversation history |
+| `top_k` | int | `10` | Number of chunks to retrieve (1–50) |
+| `min_score` | float | `0.0` | Minimum similarity threshold |
+| `language` | string | null | Preferred response language |
+| `document_type` | string | null | Filter by document type |
+| `document_ids` | list[string] | null | Filter to specific documents |
+| `filters` | dict | `{}` | Additional metadata filters |
+
+**Response:**
+```json
+{
+  "question": "Explain transformer architecture.",
+  "answer": "Transformer models replace recurrence with attention mechanisms [Source 1]. The attention layer computes weighted sums of values based on query-key similarity [Source 1].",
+  "citations": [
+    "[Paper A › Methodology › Page 3]",
+    "[Paper A › Methodology › Page 4]"
+  ],
+  "sources": [
+    {
+      "document_id": "d1",
+      "title": "Paper A",
+      "sections": ["Methodology"],
+      "chunks": [
+        {"chunk_id": "c1", "section": "Methodology", "page": 3, "score": 0.95},
+        {"chunk_id": "c2", "section": "Methodology", "page": 4, "score": 0.90}
+      ]
+    }
+  ],
+  "processing_time_ms": 1234.56,
+  "retrieval_time_ms": 45.12,
+  "generation_time_ms": 1185.23,
+  "chunk_count": 2,
+  "context_token_estimate": 120,
+  "validation_passed": true,
+  "guardrail_triggered": false,
+  "knowledge_gap": false,
+  "conversation_id": ""
+}
+```
+
+**When knowledge is insufficient:**
+```json
+{
+  "answer": "I couldn't find enough information in the uploaded documents.",
+  "knowledge_gap": true,
+  "chunk_count": 0
+}
+```
+
+**Errors:**
+- `400` — Empty question
+- `503` — Knowledge reasoning engine not available
+- `500` — Internal reasoning failure
+
+### GET /knowledge/health
+
+Check the knowledge reasoning engine health status.
+
+**Response:**
+```json
+{
+  "ready": true,
+  "search_engine_ready": true,
+  "context_builder_max_tokens": 4096,
+  "context_builder_max_chunks": 20,
+  "citation_style": "inline",
+  "allow_external_knowledge": false,
+  "conversation_history_limit": 5,
+  "active_conversations": 3
+}
+```
+
+---
+
 ## Vector Store
 
 ### POST /documents/{id}/index

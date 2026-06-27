@@ -40,6 +40,14 @@ class Settings(BaseSettings):
     search_bm25_b: float = 0.75
     search_semantic_top_k_multiplier: int = 3
 
+    reasoning_max_context_chunks: int = 20
+    reasoning_max_context_tokens: int = 4096
+    reasoning_conversation_history_limit: int = 5
+    reasoning_allow_external_knowledge: bool = False
+    reasoning_citation_style: str = "inline"
+    reasoning_temperature: float = 0.3
+    reasoning_max_tokens: int = 1024
+
     PROJECT_ROOT: ClassVar[Path] = Path(__file__).resolve().parent.parent.parent.parent
     PROMPTS_DIR: ClassVar[Path] = PROJECT_ROOT / "prompts"
     UPLOAD_DIR: ClassVar[Path] = PROJECT_ROOT / "uploads"

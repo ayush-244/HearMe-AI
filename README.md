@@ -21,6 +21,7 @@ A production-ready multilingual chatbot that detects user sentiment, emotion, to
 - **Embedding Layer**: SentenceTransformer-based embedding generation (default `BAAI/bge-base-en-v1.5`, 768 dimensions) with SHA256 checksum cache, lazy model initialization, batch encoding, configurable batch size from Settings, and persistent storage at `uploads/embeddings/`. Delete cascade with document removal.
 - **Vector Store**: Qdrant-based vector storage layer with upsert, delete, search, and health endpoints. Abstract `VectorStore` interface with `QdrantVectorStore` implementation. Collection management with dimension validation and automatic creation.
 - **Hybrid Search Engine**: Production-grade hybrid search combining semantic (vector similarity) and keyword (BM25/TF-IDF) retrieval with configurable weighted ranking, metadata boosting (language match, title overlap, section overlap, importance score, keyword overlap), section diversity enforcement (max `ceil(top_k / 3)` per section), and deduplication via `difflib.SequenceMatcher`.
+- **Knowledge Reasoning Engine**: Production RAG pipeline that transforms retrieved knowledge into accurate, citation-backed answers. Context builder with dedup, ordering, token budgeting, and adjacent chunk merging. Template-driven prompt builder loaded from `prompts/knowledge_*.txt`. Rule-based guardrails against prompt injection (24+ patterns). Response validator detecting hallucination indicators and unsupported claims. Citation manager supporting inline and markdown styles. Configurable conversation history (default 5 turns).
 
 ## Architecture
 
@@ -32,6 +33,7 @@ A production-ready multilingual chatbot that detects user sentiment, emotion, to
 │       ├── services/   # Business logic services (DI container)
 │       ├── schemas/    # Pydantic request/response models
 │       ├── retrieval/  # Hybrid search engine (semantic, keyword, ranking, citations)
+│       ├── reasoning/  # Knowledge reasoning engine (context, prompt, citations, guardrails)
 │       ├── vectorstore/# Qdrant vector storage (ABC, Qdrant impl, collection mgmt)
 │       └── config/     # Pydantic Settings
 ├── frontend/
@@ -62,8 +64,9 @@ A production-ready multilingual chatbot that detects user sentiment, emotion, to
 │       └── metadata_extractor.py # Rich metadata extraction
 ├── prompts/            # Externalized prompt templates
 ├── uploads/            # Document storage (auto-created per file type)
-├── tests/              # Unit tests (550+)
+├── tests/              # Unit tests (640+)
 │   ├── test_retrieval.py           # Hybrid search engine (88 tests)
+│   ├── test_reasoning.py           # Knowledge reasoning engine (117 tests)
 │   ├── test_vectorstore.py         # Vector store unit tests (50 tests)
 │   └── test_vectorstore_integration.py  # Vector store integration tests (20 tests)
 └── docs/               # Documentation
@@ -105,6 +108,10 @@ A production-ready multilingual chatbot that detects user sentiment, emotion, to
 | Keyword Search | BM25 (rank-bm25) / TF-IDF (scikit-learn) |
 | Hybrid Ranking | Configurable weighted scoring (semantic, keyword, metadata) |
 | Section Diversity | Max `ceil(top_k / 3)` chunks per section |
+| Knowledge RAG | Template-driven reasoning engine with guardrails, citation manager, response validator |
+| Guardrails | 24+ rule-based prompt injection detection patterns |
+| Context Budget | Configurable max tokens (4096) and max chunks (20) |
+| Conversation History | Configurable turn limit (default 5) |
 | UI | Streamlit |
 | Backend API | FastAPI |
 | Configuration | Pydantic Settings |
