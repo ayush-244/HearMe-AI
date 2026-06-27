@@ -197,6 +197,42 @@ def init_services() -> None:
 
     guardrails = Guardrails()
 
+    logger.info("Initializing Memory System: threshold=%.2f, forgetting_rate=%.2f, search_top_k=%d",
+                settings.memory_threshold, settings.forgetting_rate, settings.memory_search_top_k)
+
+    from ..memory.memory_extractor import MemoryExtractor
+    from ..memory.memory_classifier import MemoryClassifier
+    from ..memory.memory_store import MemoryStore
+    from ..memory.memory_retriever import MemoryRetriever
+    from ..memory.importance_scorer import ImportanceScorer
+    from ..memory.consolidation import ConsolidationEngine
+    from ..memory.forgetting import ForgettingEngine
+    from ..memory.memory_engine import MemoryEngine
+
+    memory_extractor = MemoryExtractor()
+    memory_classifier = MemoryClassifier()
+    memory_store = MemoryStore(storage_dir=str(settings.UPLOAD_DIR))
+    memory_retriever = MemoryRetriever(top_k=settings.memory_search_top_k)
+    importance_scorer = ImportanceScorer(threshold=settings.memory_threshold)
+    consolidation_engine = ConsolidationEngine()
+    forgetting_engine = ForgettingEngine(
+        forgetting_rate=settings.forgetting_rate,
+        importance_decay=settings.importance_decay,
+    )
+
+    memory_engine = MemoryEngine(
+        extractor=memory_extractor,
+        classifier=memory_classifier,
+        store=memory_store,
+        retriever=memory_retriever,
+        scorer=importance_scorer,
+        consolidation=consolidation_engine,
+        forgetting=forgetting_engine,
+        settings=settings,
+    )
+
+    logger.info("Memory System initialized")
+
     reasoning_engine = ReasoningEngine(
         search_engine=search_engine,
         chat_service=chat_service,
@@ -206,6 +242,7 @@ def init_services() -> None:
         response_validator=response_validator,
         guardrails=guardrails,
         settings=settings,
+        memory_engine=memory_engine,
     )
 
     logger.info("Knowledge Reasoning Engine initialized")
@@ -228,6 +265,7 @@ def init_services() -> None:
         "threat": threat_service,
         "intent": intent_service,
         "pipeline": pipeline_service,
+        "memory_engine": memory_engine,
     }
     logger.info("All services initialized (%d services)", len(_services))
 

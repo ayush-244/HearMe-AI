@@ -27,6 +27,7 @@ class ReasoningEngine:
         response_validator: ResponseValidator,
         guardrails: Guardrails,
         settings: Settings,
+        memory_engine: Any = None,
     ):
         self._search_engine = search_engine
         self._chat_service = chat_service
@@ -36,6 +37,7 @@ class ReasoningEngine:
         self._response_validator = response_validator
         self._guardrails = guardrails
         self._settings = settings
+        self._memory_engine = memory_engine
         self._conversation_histories: Dict[str, List[ConversationTurn]] = {}
         logger.info("ReasoningEngine initialized")
 
@@ -126,6 +128,23 @@ class ReasoningEngine:
 
         context = self._context_builder.build(filtered_chunks)
 
+        memory_context = None
+        if self._memory_engine is not None and query.workspace_id:
+            try:
+                memory_result = self._memory_engine.retrieve_memories(
+                    query=query.question,
+                    workspace_id=query.workspace_id,
+                    top_k=5,
+                )
+                if memory_result.get("memories"):
+                    memory_context = memory_result["memories"]
+                    logger.debug(
+                        "Memory context retrieved: %d memories for query='%s'",
+                        len(memory_context), query.question[:40],
+                    )
+            except Exception as e:
+                logger.warning("Memory retrieval failed (non-fatal): %s", e)
+
         self._citation_manager.track_chunks(context["chunks"])
 
         conversation_history = self._get_conversation_history(query.conversation_id)
@@ -138,6 +157,7 @@ class ReasoningEngine:
             conversation_history=conversation_history,
             language=query.language or "en",
             allow_external_knowledge=allow_external,
+            memory_context=memory_context,
         )
 
         if not self._guardrails.check_query(query.question):

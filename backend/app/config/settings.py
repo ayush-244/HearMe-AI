@@ -48,6 +48,14 @@ class Settings(BaseSettings):
     reasoning_temperature: float = 0.3
     reasoning_max_tokens: int = 1024
 
+    memory_threshold: float = 0.3
+    memory_limit: int = 10000
+    working_memory_limit: int = 50
+    forgetting_rate: float = 0.1
+    importance_decay: float = 0.05
+    memory_search_top_k: int = 10
+    auto_consolidation: bool = False
+
     PROJECT_ROOT: ClassVar[Path] = Path(__file__).resolve().parent.parent.parent.parent
     PROMPTS_DIR: ClassVar[Path] = PROJECT_ROOT / "prompts"
     UPLOAD_DIR: ClassVar[Path] = PROJECT_ROOT / "uploads"

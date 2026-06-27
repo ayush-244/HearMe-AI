@@ -12,11 +12,12 @@
 │       ├── api/
 │       │   ├── __init__.py
 │       │   ├── routes.py           # Chat, sentiment, analyze, health, feedback endpoints
-│       │   ├── document_routes.py  # Document upload, list, get, delete, extract, content
-│       │   ├── search_routes.py   # Search endpoints (POST /search, GET /search/health)
-│       │   └── knowledge_routes.py # Knowledge chat endpoints (POST /knowledge/chat, GET /knowledge/health)
+│   │   ├── document_routes.py  # Document upload, list, get, delete, extract, content
+│   │   ├── search_routes.py   # Search endpoints (POST /search, GET /search/health)
+│   │   ├── knowledge_routes.py # Knowledge chat endpoints (POST /knowledge/chat, GET /knowledge/health)
+│   │   └── memory_routes.py   # Memory endpoints (extract, list, search, delete, consolidate, health)
 │       ├── services/
-│       │   ├── __init__.py         # Service initialization & dependency injection
+│       │   ├── __init__.py         # Service initialization & dependency injection (incl. MemoryEngine, ReasoningEngine)
 │       │   ├── sentiment_service.py
 │       │   ├── language_service.py
 │       │   ├── prompt_service.py
@@ -43,13 +44,24 @@
 │       │   └── retrieval_metrics.py # Query latency tracking, percentiles
 │       ├── reasoning/
 │       │   ├── __init__.py
-│       │   ├── reasoning_engine.py  # Knowledge RAG orchestrator
+│       │   ├── reasoning_engine.py  # Knowledge RAG orchestrator (with memory integration)
 │       │   ├── context_builder.py   # Context dedup, ordering, token budgeting, merging
 │       │   ├── prompt_builder.py    # Template-driven prompt construction
 │       │   ├── citation_manager.py  # Citation tracking and formatting
 │       │   ├── response_validator.py # Hallucination + unsupported claim detection
 │       │   ├── guardrails.py        # Prompt injection detection (24+ patterns)
 │       │   └── answer_models.py     # KnowledgeQuery, KnowledgeAnswer, ConversationTurn
+│       ├── memory/
+│       │   ├── __init__.py
+│       │   ├── memory_engine.py     # Memory orchestrator (extraction, scoring, retrieval, consolidation)
+│       │   ├── memory_extractor.py  # Rule-based extraction with noise filtering
+│       │   ├── memory_classifier.py # Type detection (semantic/episodic/preference/working)
+│       │   ├── memory_store.py      # JSON file persistence at uploads/memory/
+│       │   ├── memory_retriever.py  # Lexical relevance + importance + recency scoring
+│       │   ├── importance_scorer.py # 6-factor importance scoring engine
+│       │   ├── consolidation.py     # Topic clustering and memory merging
+│       │   ├── forgetting.py        # Configurable decay with high-importance protection
+│       │   └── memory_models.py     # MemoryEntry, MemoryQuery, MemoryType dataclasses
 │       ├── vectorstore/
 │       │   ├── __init__.py
 │       │   ├── base.py             # VectorStore ABC (interface)
@@ -62,7 +74,8 @@
 │       │   ├── chat.py             # Chat/analyze/sentiment/language Pydantic models
 │       │   ├── document.py         # Document metadata/upload/list/delete Pydantic models
 │       │   ├── search.py           # SearchRequest, SearchResponse, SearchHealthResponse
-│       │   └── knowledge.py        # KnowledgeChatRequest, KnowledgeChatResponse, KnowledgeHealthResponse
+│       │   ├── knowledge.py        # KnowledgeChatRequest, KnowledgeChatResponse, KnowledgeHealthResponse
+│       │   └── memory.py           # ExtractMemoryRequest/Response, SearchMemoryRequest/Response, MemoryHealthResponse
 │       ├── config/
 │       │   ├── __init__.py
 │       │   └── settings.py         # Pydantic Settings from .env (incl. Qdrant & search config)
@@ -128,7 +141,12 @@
 │   ├── metadata.json              # Document metadata store
 │   ├── extracted/                  # Extracted text content
 │   ├── chunked/                    # Generated chunks
-│   └── embeddings/                # Embedding vectors
+│   ├── embeddings/                # Embedding vectors
+│   └── memory/                    # Memory persistence JSON files
+│       ├── semantic.json          # Factual memories
+│       ├── episodic.json          # Event memories
+│       ├── preferences.json       # Preference memories
+│       └── working.json           # Temporary working memories
 │
 ├── prompts/
 │   ├── chat_template.txt           # Prompt template with placeholders
@@ -166,7 +184,8 @@
 │   ├── test_vectorstore.py        # Vector store unit tests (50 tests, mocked Qdrant)
 │   ├── test_vectorstore_integration.py  # Vector store integration tests (20 tests, real embedded Qdrant)
 │   ├── test_retrieval.py          # Hybrid search engine tests (88 tests, mocked & integration)
-│   └── test_reasoning.py          # Knowledge reasoning engine tests (117 tests, mocked)
+│   ├── test_reasoning.py          # Knowledge reasoning engine tests (117 tests, mocked)
+│   └── test_memory.py             # Personal memory system tests (124 tests, mocked)
 │
 ├── docs/
 │   ├── ARCHITECTURE.md

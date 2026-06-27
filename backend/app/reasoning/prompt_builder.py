@@ -38,11 +38,16 @@ class PromptBuilder:
         conversation_history: Optional[List[Dict[str, str]]] = None,
         language: str = "en",
         allow_external_knowledge: bool = False,
+        memory_context: Optional[List[Dict[str, Any]]] = None,
     ) -> str:
         chunks = context.get("chunks", [])
         total_tokens = context.get("total_tokens", 0)
 
         context_block = self._format_context(chunks)
+
+        if memory_context:
+            memory_block = self._format_memory_context(memory_context)
+            context_block = context_block + "\n\n" + memory_block
 
         history_block = self._format_history(conversation_history)
 
@@ -73,6 +78,23 @@ class PromptBuilder:
             len(system_prompt), len(user_prompt), len(full_prompt), len(chunks), total_tokens,
         )
         return full_prompt
+
+    def _format_memory_context(self, memories: List[Dict[str, Any]]) -> str:
+        if not memories:
+            return ""
+        lines = [
+            "--- Personal Memories ---",
+            "The following information is known about you from past conversations:",
+            "",
+        ]
+        for i, mem in enumerate(memories, 1):
+            content = mem.get("content", "") or ""
+            mem_type = mem.get("type", "fact")
+            importance = mem.get("importance", 0)
+            lines.append(f"[Memory {i}] ({mem_type}, importance={importance:.2f}) {content}")
+        lines.append("")
+        lines.append("Use these personal memories to personalize your answer if relevant.")
+        return "\n".join(lines)
 
     def _format_context(self, chunks: List[Dict[str, Any]]) -> str:
         if not chunks:

@@ -495,6 +495,196 @@ Check the knowledge reasoning engine health status.
 
 ---
 
+## Personal Memory System
+
+### POST /memory/extract
+
+Extract memories from a user's conversation turn. Analyzes text for semantic facts, preferences, and episodic events. Filters noise (greetings, small talk, acknowledgments). Stores only memories above configurable importance threshold.
+
+**Request:**
+```json
+{
+  "user_text": "My name is Ayush and I study Computer Science.",
+  "assistant_text": null,
+  "user_id": "user1",
+  "workspace_id": "default"
+}
+```
+
+**Parameters:**
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `user_text` | string | required | User's message (min 1 char) |
+| `assistant_text` | string | null | Assistant's response (optional) |
+| `user_id` | string | `""` | User identifier |
+| `workspace_id` | string | `"default"` | Workspace scope |
+
+**Response:**
+```json
+{
+  "extracted_count": 1,
+  "stored_count": 1,
+  "rejected_count": 0,
+  "updated_count": 0,
+  "working_memory_id": null,
+  "processing_time_ms": 1.23
+}
+```
+
+**Fields:**
+| Field | Description |
+|-------|-------------|
+| `extracted_count` | Total candidates extracted from text |
+| `stored_count` | Candidates that passed importance threshold |
+| `rejected_count` | Candidates below importance threshold |
+| `updated_count` | Existing memories updated (semantic dedup) |
+| `working_memory_id` | ID of working memory entry, if created |
+
+**Errors:**
+- `422` — Empty user_text
+- `503` — Memory engine not available
+
+### GET /memory
+
+List stored memories with optional filters.
+
+**Query Parameters:**
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| `user_id` | string | `""` | Filter by user |
+| `workspace_id` | string | `"default"` | Filter by workspace |
+| `memory_type` | string | null | Filter by type: episodic, semantic, preference, working |
+| `include_working` | bool | `false` | Include working memories |
+
+**Response:**
+```json
+{
+  "memories": [
+    {
+      "memory_id": "abc-123-def",
+      "user_id": "user1",
+      "type": "semantic",
+      "content": "My name is Ayush and I study Computer Science.",
+      "summary": "My name is Ayush and I study Computer Science.",
+      "importance": 0.85,
+      "confidence": 0.9,
+      "created_at": "2026-06-27T12:00:00",
+      "updated_at": "2026-06-27T12:00:00",
+      "last_accessed": "2026-06-27T12:00:00",
+      "access_count": 1,
+      "source": "conversation",
+      "pinned": false
+    }
+  ],
+  "count": 1
+}
+```
+
+### POST /memory/search
+
+Semantic search across personal memories. Returns memories ranked by lexical relevance, importance, and recency.
+
+**Request:**
+```json
+{
+  "query": "What does the user study?",
+  "user_id": "",
+  "workspace_id": "default",
+  "memory_types": null,
+  "top_k": 10,
+  "min_importance": 0.0,
+  "include_working": false
+}
+```
+
+**Parameters:**
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `query` | string | required | Search query |
+| `user_id` | string | `""` | Filter by user |
+| `workspace_id` | string | `"default"` | Filter by workspace |
+| `memory_types` | list[string] | null | Filter by types (episodic, semantic, preference) |
+| `top_k` | int | `10` | Max results (1–50) |
+| `min_importance` | float | `0.0` | Minimum importance threshold |
+| `include_working` | bool | `false` | Include working memories |
+
+**Response:**
+```json
+{
+  "memories": [
+    {
+      "memory_id": "abc-123-def",
+      "user_id": "user1",
+      "type": "semantic",
+      "content": "My name is Ayush and I study Computer Science.",
+      "importance": 0.85,
+      "confidence": 0.9
+    }
+  ],
+  "count": 1,
+  "processing_time_ms": 0.45
+}
+```
+
+### DELETE /memory/{memory_id}
+
+Delete a specific memory by ID.
+
+**Errors:**
+- `404` — Memory not found
+
+**Response:**
+```json
+{
+  "deleted": true,
+  "memory_id": "abc-123-def"
+}
+```
+
+### POST /memory/consolidate
+
+Merge related memories into consolidated entries. Groups by topic (Python, FastAPI, AI, etc.) and creates a single merged entry with combined content and elevated importance.
+
+**Query Parameters:**
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| `user_id` | string | `""` | User identifier |
+| `workspace_id` | string | `"default"` | Workspace scope |
+
+**Response:**
+```json
+{
+  "consolidated_count": 2,
+  "before_count": 10,
+  "after_count": 9,
+  "processing_time_ms": 1.5
+}
+```
+
+### GET /memory/health
+
+Check the memory system health status.
+
+**Response:**
+```json
+{
+  "ready": true,
+  "memory_count": {
+    "semantic": 5,
+    "episodic": 3,
+    "preference": 2,
+    "working": 1,
+    "total": 11
+  },
+  "memory_threshold": 0.3,
+  "forgetting_rate": 0.1,
+  "importance_decay": 0.05,
+  "auto_consolidation_enabled": false
+}
+```
+
+---
+
 ## Vector Store
 
 ### POST /documents/{id}/index

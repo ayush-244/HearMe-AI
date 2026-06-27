@@ -24,6 +24,7 @@ graph TD
         IS[IntentService]
         PLS[PipelineService]
         DS[DocumentService]
+        MS[MemoryEngine<br/>Extraction, Scoring,<br/>Store, Retrieval]
     end
     subgraph "AI Models"
         SM[SentimentModel<br/>RoBERTa]
@@ -474,6 +475,126 @@ Input: ["text a", "text b", "text a"]
   "strategy": "section"
 }
 ```
+
+## Personal Memory System
+
+### Architecture
+
+```mermaid
+graph TD
+    subgraph "User Input"
+        UT[User Text] --> ME[MemoryEngine<br/>process_conversation_turn]
+    end
+    subgraph "Extraction"
+        ME --> EX[MemoryExtractor<br/>Rule-based extraction]
+        EX --> NF[Noise Filter<br/>Greetings, farewells,<br/>small talk, acknowledgments]
+        NF --> CD[Candidate Memories]
+    end
+    subgraph "Classification"
+        CD --> MC[MemoryClassifier<br/>Type detection]
+        MC --> ST[Semantic Facts<br/>"I study CS."]
+        MC --> EP[Episodic Events<br/>"I uploaded my resume."]
+        MC --> PR[Preferences<br/>"I like Python."]
+        MC --> WO[Working Memory<br/>Temporary context]
+    end
+    subgraph "Scoring"
+        ST --> IS[ImportanceScorer]
+        EP --> IS
+        PR --> IS
+        IS --> FR[Frequency bonus]
+        IS --> RE[Recency bonus]
+        IS --> SP[Specificity score]
+        IS --> EM[Emphasis score]
+        IS --> FU[Future usefulness]
+        IS --> TH[Threshold check<br/>configurable]
+    end
+    subgraph "Storage"
+        TH --> MS[MemoryStore<br/>JSON file persistence]
+        MS --> SN[semantic.json]
+        MS --> EPJ[episodic.json]
+        MS --> PRJ[preferences.json]
+        MS --> WOJ[working.json]
+    end
+    subgraph "Retrieval"
+        Q2[Query] --> MR[MemoryRetriever]
+        MS --> MR
+        MR --> LF[Lexical filter]
+        MR --> IW[Importance weighting]
+        MR --> RW[Recency weighting]
+        MR --> RT[Relevant Memories]
+    end
+    subgraph "Consolidation"
+        CO[ConsolidationEngine] --> TC[Topic clustering<br/>python, fastapi, ai...]
+        TC --> MG[Merge cluster<br/>into single entry]
+        MG --> IC[Increase importance]
+    end
+    subgraph "Forgetting"
+        FO[ForgettingEngine] --> DP[Decay protection<br/>pinned, high-importance,<br/>frequently accessed]
+        DP --> DE[Decay low-importance<br/>memories over time]
+        DE --> FG[Forget below threshold]
+    end
+    subgraph "Reasoning Integration"
+        RT --> RE[ReasoningEngine]
+        RE --> PM[PromptBuilder]
+        PM --> MC2[Memory context merged<br/>with knowledge context]
+        MC2 --> LLM[LLM Response<br/>with personalization]
+    end
+```
+
+### Memory Lifecycle
+
+1. **Extraction**: Every conversation turn is analyzed. Meaningful content (facts, preferences, events) is extracted. Noise (greetings, farewells, small talk, acknowledgments) is discarded.
+2. **Classification**: Each candidate is classified into one of four memory types via regex pattern matching.
+3. **Importance Scoring**: Six weighted factors produce a 0.0-1.0 score:
+   - **Base type importance** (25%): Semantic=0.7, Preference=0.6, Episodic=0.4, Working=0.1
+   - **Recency** (15%): Memories from the last 24 hours get +0.2
+   - **Specificity** (25%): Proper nouns (+0.15 each), digits (+0.1), specific terms (+0.1), specific verbs (+0.1)
+   - **Emphasis** (10%): Exclamation marks, all-caps words, questions
+   - **Frequency** (15%): Word overlap with existing memories >10% gives proportional bonus
+   - **Future usefulness** (10%): Self-referential statements with preference/future signals
+4. **Filtering**: Only memories above the configurable `memory_threshold` (default 0.3) are stored.
+5. **Deduplication**: Before storing, the engine checks for semantic duplicates using word overlap (>70%) and SequenceMatcher ratio (>80%). Existing memories are updated instead of creating duplicates.
+6. **Retrieval**: Given a new query, memories are filtered by type/user/workspace, scored by lexical overlap (40%), importance (40%), and recency (20%), then the top-k are returned.
+7. **Consolidation**: On request, related memories (same topic keywords) are clustered and merged into a single entry with elevated importance.
+8. **Forgetting**: Decay is applied periodically. Importance decays exponentially (`importance * exp(-rate * days_since_access)`). Memories below 0.05 importance after 7+ days without access are forgotten. Protected memories (pinned, importance >0.7, access count >20, or preference >0.5) are never forgotten.
+
+### Memory Settings
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| `memory_threshold` | 0.3 | Minimum importance score to store a memory |
+| `memory_limit` | 10000 | Maximum total memories |
+| `working_memory_limit` | 50 | Maximum working memories |
+| `forgetting_rate` | 0.1 | Exponential decay rate per day |
+| `importance_decay` | 0.05 | Base importance decay per 30 days |
+| `memory_search_top_k` | 10 | Default top-K for memory retrieval |
+| `auto_consolidation` | false | Auto-consolidate after conversation turns |
+
+### Memory Files
+
+Memories are persisted as JSON files in `uploads/memory/`:
+
+| File | Contents |
+|------|----------|
+| `semantic.json` | Factual memories ("I study CS", "My name is Ayush") |
+| `episodic.json` | Event memories ("I uploaded my resume") |
+| `preferences.json` | Preference memories ("I like Python", "I prefer dark mode") |
+| `working.json` | Temporary working memories (auto-cleared) |
+
+### Service Responsibilities
+
+| Service | Responsibility |
+|---------|---------------|
+| `MemoryExtractor` | Extract meaningful content from conversation turns; filter noise |
+| `MemoryClassifier` | Classify memories into semantic/episodic/preference/working |
+| `ImportanceScorer` | Score candidates on 6 weighted factors; enforce threshold |
+| `MemoryStore` | Persist/load/search memories via JSON files |
+| `MemoryRetriever` | Score and rank memories for relevance to a query |
+| `ConsolidationEngine` | Cluster related memories by topic; merge into single entry |
+| `ForgettingEngine` | Decay importance over time; forget low-importance entries |
+| `MemoryEngine` | Orchestrator tying all components together |
+
+---
 
 ## Knowledge Reasoning Pipeline
 
