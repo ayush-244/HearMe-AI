@@ -3,10 +3,11 @@ import logging
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from ai.embeddings.embedding_model import EmbeddingModel
 from ai.embeddings.embedding_cache import EmbeddingCache
+from ..vectorstore.base import VectorStore
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +27,7 @@ class EmbeddingService:
         batch_size: int = 32,
         embedding_version: str = "1.0.0",
         max_seq_length: int = 512,
+        vector_store: Optional[VectorStore] = None,
     ):
         self._embeddings_dir = Path(embeddings_dir)
         self._model_name = model_name
@@ -35,6 +37,7 @@ class EmbeddingService:
         self._model: Optional[EmbeddingModel] = None
         self._cache = EmbeddingCache()
         self._embeddings_dir.mkdir(parents=True, exist_ok=True)
+        self._vector_store = vector_store
 
     def initialize(self) -> None:
         if self._model is not None and self._model.is_loaded:
@@ -214,6 +217,69 @@ class EmbeddingService:
     def _ensure_initialized(self) -> None:
         if self._model is None or not self._model.is_loaded:
             self.initialize()
+
+    def index_document(
+        self,
+        document_id: str,
+        chunks_data: Any,
+        analysis: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        if self._vector_store is None:
+            raise EmbeddingError("Vector store not configured", status_code=500)
+
+        result = self.embed_document(document_id, chunks_data)
+
+        chunks_list = chunks_data if isinstance(chunks_data, list) else chunks_data.get("chunks", [])
+
+        enriched = []
+        for chunk in chunks_list:
+            chunk_entry = None
+            for e in result.get("chunks", []):
+                if e["chunk_id"] == chunk["chunk_id"]:
+                    chunk_entry = e
+                    break
+            if chunk_entry is None:
+                continue
+
+            if analysis:
+                chunk["language"] = analysis.get("language_code", "")
+                chunk["document_type"] = analysis.get("document_type", "")
+                chunk["keywords"] = analysis.get("keywords", [])
+                chunk["title"] = analysis.get("document_type", "")
+
+            enriched.append({
+                **chunk,
+                "vector": chunk_entry["vector"],
+                "checksum": chunk_entry["checksum"],
+                "embedding_version": self._embedding_version,
+            })
+
+        vectors_count = self._vector_store.upsert_document(document_id, enriched)
+
+        return {
+            "status": "indexed",
+            "vectors": vectors_count,
+            "collection": getattr(self._vector_store, "_collection_name", "unknown"),
+        }
+
+    def deindex_document(self, document_id: str) -> Dict[str, Any]:
+        if self._vector_store is None:
+            raise EmbeddingError("Vector store not configured", status_code=500)
+
+        count_before = self._vector_store.count()
+
+        self._vector_store.delete_document(document_id)
+
+        self.delete_embeddings(document_id)
+
+        count_after = self._vector_store.count()
+        vectors_removed = max(0, count_before - count_after)
+
+        return {
+            "status": "deindexed",
+            "document_id": document_id,
+            "vectors_removed": vectors_removed,
+        }
 
     def _empty_result(self, document_id: str) -> dict:
         dim = self._model.dimension if self._model else 0

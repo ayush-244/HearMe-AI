@@ -12,6 +12,7 @@ from ..schemas.chat import (
     AnalyzeResponse,
     HealthResponse,
 )
+from ..schemas.document import VectorStoreHealthResponse
 from ..services import get_services
 
 logger = logging.getLogger(__name__)
@@ -78,6 +79,32 @@ async def detect_language_endpoint(request: LanguageRequest):
 @router.get("/health", response_model=HealthResponse)
 async def health_endpoint():
     return HealthResponse(status="healthy")
+
+
+@router.get("/vectorstore/health", response_model=VectorStoreHealthResponse)
+async def vectorstore_health_endpoint():
+    services = get_services()
+    vector_store = services.get("vector_store")
+    if vector_store is None:
+        return VectorStoreHealthResponse(
+            status="not_configured",
+            collection="",
+            vectors=0,
+        )
+    try:
+        health_info = vector_store.health()
+        return VectorStoreHealthResponse(
+            status=health_info.get("status", "unknown"),
+            collection=health_info.get("collection", ""),
+            vectors=health_info.get("vectors", 0),
+        )
+    except Exception as e:
+        logger.error("Vector store health check failed: %s", e)
+        return VectorStoreHealthResponse(
+            status="unhealthy",
+            collection="",
+            vectors=0,
+        )
 
 
 @router.post("/feedback", response_model=dict)

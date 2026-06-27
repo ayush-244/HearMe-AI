@@ -12,7 +12,8 @@
 │       ├── api/
 │       │   ├── __init__.py
 │       │   ├── routes.py           # Chat, sentiment, analyze, health, feedback endpoints
-│       │   └── document_routes.py  # Document upload, list, get, delete endpoints
+│       │   ├── document_routes.py  # Document upload, list, get, delete, extract, content
+│       │   └── search_routes.py   # Search endpoints (POST /search, GET /search/health)
 │       ├── services/
 │       │   ├── __init__.py         # Service initialization & dependency injection
 │       │   ├── sentiment_service.py
@@ -26,14 +27,34 @@
 │       │   ├── threat_service.py
 │       │   ├── intent_service.py
 │       │   ├── pipeline_service.py
-│       │   └── document_service.py # Document upload, validation, storage, metadata
+│       │   ├── document_service.py # Document upload, validation, storage, metadata
+│       │   └── embedding_service.py # Embedding generation, caching, CRUD
+│       ├── retrieval/
+│       │   ├── __init__.py
+│       │   ├── search_engine.py     # Hybrid search orchestrator
+│       │   ├── search_models.py     # SearchQuery, SearchResult, SearchResultItem
+│       │   ├── query_parser.py      # Query parsing, filter extraction, stop word removal
+│       │   ├── query_analyzer.py    # Language/intent/complexity analysis
+│       │   ├── semantic_search.py   # Embedding + vector store search
+│       │   ├── keyword_search.py    # BM25 / TF-IDF keyword scoring
+│       │   ├── hybrid_ranker.py     # Weighted hybrid ranking + dedup + diversity
+│       │   ├── citation_builder.py  # Citation string generation
+│       │   └── retrieval_metrics.py # Query latency tracking, percentiles
+│       ├── vectorstore/
+│       │   ├── __init__.py
+│       │   ├── base.py             # VectorStore ABC (interface)
+│       │   ├── qdrant_store.py     # QdrantVectorStore implementation
+│       │   ├── collection_manager.py # Qdrant collection lifecycle
+│       │   ├── metadata_mapper.py  # Chunk ↔ payload mapping, filter building
+│       │   └── exceptions.py       # VectorStoreError, CollectionError, IndexError
 │       ├── schemas/
 │       │   ├── __init__.py
 │       │   ├── chat.py             # Chat/analyze/sentiment/language Pydantic models
-│       │   └── document.py         # Document metadata/upload/list/delete Pydantic models
+│       │   ├── document.py         # Document metadata/upload/list/delete Pydantic models
+│       │   └── search.py           # SearchRequest, SearchResponse, SearchHealthResponse
 │       ├── config/
 │       │   ├── __init__.py
-│       │   └── settings.py         # Pydantic Settings from .env
+│       │   └── settings.py         # Pydantic Settings from .env (incl. Qdrant & search config)
 │       ├── middleware/
 │       │   └── __init__.py         # (placeholder for future middleware)
 │       ├── utils/
@@ -68,23 +89,35 @@
 │   ├── pipeline/
 │   │   ├── __init__.py
 │   │   └── ai_pipeline.py          # ZeroShotClassifier, AIPipeline
-│   ├── documents/                  # (stubs for future text extraction)
+│   ├── chunking/
 │   │   ├── __init__.py
-│   │   ├── pdf_loader.py
-│   │   ├── docx_loader.py
-│   │   ├── txt_loader.py
-│   │   └── markdown_loader.py
-│   ├── translation/                # (placeholder)
-│   ├── rag/                        # (placeholder)
-│   ├── memory/                     # (placeholder)
-│   └── embeddings/                 # (placeholder)
+│   │   ├── chunk_engine.py         # Chunking orchestrator
+│   │   ├── chunk_models.py         # Chunk dataclass + statistics
+│   │   ├── chunk_strategy.py       # Strategy selection logic
+│   │   ├── fixed_chunker.py        # Fixed-size chunking
+│   │   ├── section_chunker.py      # Section-aware chunking
+│   │   ├── semantic_chunker.py     # Semantic chunking
+│   │   └── overlap.py              # Overlap generation
+│   ├── embeddings/
+│   │   ├── __init__.py
+│   │   ├── embedding_model.py      # SentenceTransformer wrapper
+│   │   └── embedding_cache.py      # SHA256 checksum cache
+│   └── documents/
+│       ├── __init__.py
+│       ├── analyzer.py             # Document intelligence orchestrator
+│       ├── document_classifier.py  # Heuristic document type classification
+│       ├── section_parser.py       # Logical section extraction
+│       └── metadata_extractor.py   # Rich metadata extraction
 │
 ├── uploads/                        # Document storage (auto-created)
 │   ├── pdf/
 │   ├── docx/
 │   ├── txt/
 │   ├── markdown/
-│   └── metadata.json               # Document metadata store
+│   ├── metadata.json              # Document metadata store
+│   ├── extracted/                  # Extracted text content
+│   ├── chunked/                    # Generated chunks
+│   └── embeddings/                # Embedding vectors
 │
 ├── prompts/
 │   ├── chat_template.txt           # Prompt template with placeholders
@@ -110,7 +143,15 @@
 │   ├── test_chat_integration.py
 │   ├── test_api_client.py
 │   ├── test_document_service.py    # Unit tests (22 tests)
-│   └── test_document_routes.py     # Integration tests (8 tests)
+│   ├── test_document_routes.py     # Integration tests (8 tests)
+│   ├── test_document_loaders.py    # Loader tests (PDF, DOCX, TXT, Markdown)
+│   ├── test_document_intelligence.py # Analyzer, classifier, section parser, metadata
+│   ├── test_chunking.py           # Chunking engine tests (60+ tests)
+│   ├── test_embedding_model.py    # Embedding model unit tests
+│   ├── test_embedding_service.py  # Embedding service tests (40+ tests)
+│   ├── test_vectorstore.py        # Vector store unit tests (50 tests, mocked Qdrant)
+│   ├── test_vectorstore_integration.py  # Vector store integration tests (20 tests, real embedded Qdrant)
+│   └── test_retrieval.py          # Hybrid search engine tests (88 tests, mocked & integration)
 │
 ├── docs/
 │   ├── ARCHITECTURE.md

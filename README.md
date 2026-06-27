@@ -19,6 +19,8 @@ A production-ready multilingual chatbot that detects user sentiment, emotion, to
 - **Document Intelligence**: Analyze document structure without LLMs — classify document type (research paper, resume, book, etc.), extract logical sections, detect tables/images/code/URLs/emails, extract keywords (lightweight RAKE-like), estimate reading time, generate summary preview, and detect language
 - **Intelligent Chunking**: Production-grade chunking engine with three strategies — Fixed-size (500 words, 50 overlap), Section-aware (respects document sections), and Semantic (preserves paragraphs, tables, code blocks, lists). Automatic strategy selection per document type. Validation, deduplication, statistics, and persistent storage at `uploads/chunks/`
 - **Embedding Layer**: SentenceTransformer-based embedding generation (default `BAAI/bge-base-en-v1.5`, 768 dimensions) with SHA256 checksum cache, lazy model initialization, batch encoding, configurable batch size from Settings, and persistent storage at `uploads/embeddings/`. Delete cascade with document removal.
+- **Vector Store**: Qdrant-based vector storage layer with upsert, delete, search, and health endpoints. Abstract `VectorStore` interface with `QdrantVectorStore` implementation. Collection management with dimension validation and automatic creation.
+- **Hybrid Search Engine**: Production-grade hybrid search combining semantic (vector similarity) and keyword (BM25/TF-IDF) retrieval with configurable weighted ranking, metadata boosting (language match, title overlap, section overlap, importance score, keyword overlap), section diversity enforcement (max `ceil(top_k / 3)` per section), and deduplication via `difflib.SequenceMatcher`.
 
 ## Architecture
 
@@ -26,9 +28,11 @@ A production-ready multilingual chatbot that detects user sentiment, emotion, to
 ├── app.py              # Streamlit entry point (compatibility shim)
 ├── backend/
 │   └── app/            # FastAPI backend
-│       ├── api/        # REST endpoints
+│       ├── api/        # REST endpoints (chat, documents, search, vectorstore)
 │       ├── services/   # Business logic services (DI container)
 │       ├── schemas/    # Pydantic request/response models
+│       ├── retrieval/  # Hybrid search engine (semantic, keyword, ranking, citations)
+│       ├── vectorstore/# Qdrant vector storage (ABC, Qdrant impl, collection mgmt)
 │       └── config/     # Pydantic Settings
 ├── frontend/
 │   └── streamlit_ui.py # Streamlit application
@@ -58,7 +62,10 @@ A production-ready multilingual chatbot that detects user sentiment, emotion, to
 │       └── metadata_extractor.py # Rich metadata extraction
 ├── prompts/            # Externalized prompt templates
 ├── uploads/            # Document storage (auto-created per file type)
-├── tests/              # Unit tests (385+)
+├── tests/              # Unit tests (550+)
+│   ├── test_retrieval.py           # Hybrid search engine (88 tests)
+│   ├── test_vectorstore.py         # Vector store unit tests (50 tests)
+│   └── test_vectorstore_integration.py  # Vector store integration tests (20 tests)
 └── docs/               # Documentation
 ```
 
@@ -93,6 +100,11 @@ A production-ready multilingual chatbot that detects user sentiment, emotion, to
 | Language Detection | langdetect |
 | Embedding Model | BAAI/bge-base-en-v1.5 (SentenceTransformer) |
 | Embedding Cache | SHA256 checksum deduplication |
+| Vector Storage | Qdrant (embedded/remote) |
+| Vector Store Interface | Abstract `VectorStore` ABC |
+| Keyword Search | BM25 (rank-bm25) / TF-IDF (scikit-learn) |
+| Hybrid Ranking | Configurable weighted scoring (semantic, keyword, metadata) |
+| Section Diversity | Max `ceil(top_k / 3)` chunks per section |
 | UI | Streamlit |
 | Backend API | FastAPI |
 | Configuration | Pydantic Settings |

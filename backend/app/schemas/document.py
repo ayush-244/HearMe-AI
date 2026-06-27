@@ -182,3 +182,21 @@ class EmbeddingChunkResponse(BaseModel):
     dimension: int
     model: str
     vector: List[float]
+
+
+class IndexResponse(BaseModel):
+    status: str
+    vectors: int
+    collection: str
+
+
+class DeindexResponse(BaseModel):
+    status: str
+    document_id: str
+    vectors_removed: int
+
+
+class VectorStoreHealthResponse(BaseModel):
+    status: str
+    collection: str
+    vectors: int

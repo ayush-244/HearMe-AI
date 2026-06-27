@@ -16,6 +16,8 @@ from ..schemas.document import (
     EmbeddingResponse,
     EmbeddingListResponse,
     EmbeddingChunkResponse,
+    IndexResponse,
+    DeindexResponse,
 )
 from ..services import get_services
 from ..services.document_service import DocumentValidationError, DocumentExtractionError
@@ -303,3 +305,71 @@ async def get_embedding(document_id: str, chunk_id: str):
         raise HTTPException(status_code=404, detail="Embedding not found")
 
     return EmbeddingChunkResponse(**result)
+
+
+@router.post("/documents/{document_id}/index", response_model=IndexResponse)
+async def index_document(document_id: str):
+    services = get_services()
+    doc_service = services["document"]
+    emb_service = services["embedding_with_store"]
+
+    logger.info("/documents/{id}/index request: id=%s", document_id)
+
+    meta = doc_service.get_metadata(document_id)
+    if meta is None:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    chunks_data = doc_service.get_chunks_data(document_id)
+    if chunks_data is None:
+        raise HTTPException(status_code=400, detail="Document must be chunked before indexing")
+
+    analysis = doc_service.get_analysis(document_id)
+
+    try:
+        result = emb_service.index_document(document_id, chunks_data, analysis)
+        logger.info(
+            "/documents/{id}/index success: vectors=%d, collection=%s",
+            document_id, result["vectors"], result["collection"],
+        )
+        return IndexResponse(
+            status=result["status"],
+            vectors=result["vectors"],
+            collection=result["collection"],
+        )
+    except EmbeddingError as e:
+        logger.warning("/documents/{id}/index error: %s — %s", document_id, e.message)
+        raise HTTPException(status_code=e.status_code, detail=e.message)
+    except Exception as e:
+        logger.error("/documents/{id}/index unexpected error: %s", document_id, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/documents/{document_id}/index", response_model=DeindexResponse)
+async def deindex_document(document_id: str):
+    services = get_services()
+    doc_service = services["document"]
+    emb_service = services["embedding_with_store"]
+
+    logger.info("/documents/{id}/index DELETE request: id=%s", document_id)
+
+    meta = doc_service.get_metadata(document_id)
+    if meta is None:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    try:
+        result = emb_service.deindex_document(document_id)
+        logger.info(
+            "/documents/{id}/index DELETE success: vectors_removed=%d",
+            document_id, result["vectors_removed"],
+        )
+        return DeindexResponse(
+            status=result["status"],
+            document_id=result["document_id"],
+            vectors_removed=result["vectors_removed"],
+        )
+    except EmbeddingError as e:
+        logger.warning("/documents/{id}/index DELETE error: %s — %s", document_id, e.message)
+        raise HTTPException(status_code=e.status_code, detail=e.message)
+    except Exception as e:
+        logger.error("/documents/{id}/index DELETE unexpected error: %s", document_id, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))

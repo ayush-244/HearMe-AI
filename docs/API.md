@@ -395,6 +395,185 @@ Deleting a document also removes its embeddings (handled automatically).
 
 ---
 
+## Vector Store
+
+### POST /documents/{id}/index
+
+Index a document's chunks into the Qdrant vector store for semantic search. Document must be embedded first via `POST /documents/{id}/embed`.
+
+**Response:**
+```json
+{
+  "document_id": "550e8400-e29b-41d4-a716-446655440000",
+  "chunks_indexed": 10,
+  "status": "indexed"
+}
+```
+
+**Errors:**
+- `400` — Document not embedded yet (embed first)
+- `404` — Document not found
+
+### DELETE /documents/{id}/index
+
+Remove a document's vectors from the Qdrant vector store.
+
+**Response:**
+```json
+{
+  "status": "deindexed",
+  "document_id": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+### GET /vectorstore/health
+
+Check the Qdrant vector store health status.
+
+**Response:**
+```json
+{
+  "status": "healthy",
+  "collection": "documents",
+  "points_count": 150,
+  "vector_dimension": 768
+}
+```
+
+---
+
+## Search
+
+### POST /search
+
+Hybrid semantic + keyword search across indexed document chunks. Supports filters, language/document type constraints, and query analysis.
+
+**Request:**
+```json
+{
+  "query": "transformer attention mechanism",
+  "workspace_id": "default",
+  "top_k": 10,
+  "min_score": 0.0,
+  "language": null,
+  "document_type": null,
+  "document_ids": null,
+  "filters": {}
+}
+```
+
+**Parameters:**
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `query` | string | required | Search query text |
+| `workspace_id` | string | `"default"` | Scope search to a workspace |
+| `top_k` | int | `10` | Max results (clamped to 1–50) |
+| `min_score` | float | `0.0` | Minimum hybrid score threshold (0.0–1.0) |
+| `language` | string | null | Filter by language code (e.g. `"en"`) |
+| `document_type` | string | null | Filter by document type (e.g. `"research_paper"`) |
+| `document_ids` | list[string] | null | Filter to specific documents |
+| `filters` | dict | `{}` | Additional metadata key-value filters |
+
+Query text supports inline filters via prefixes:
+- `lang:en` — Filter to English results
+- `type:paper` — Filter to research paper type
+- `workspace:team1` — Filter to workspace
+- `doc:id` — Filter to specific document
+- `section:Intro` — Filter to section name
+
+Quoted phrases (`"deep learning"`) are preserved as exact match tokens.
+
+**Response:**
+```json
+{
+  "query": "transformer attention mechanism",
+  "results": [
+    {
+      "chunk_id": "abc-123-def",
+      "document_id": "550e8400-e29b-41d4-a716-446655440000",
+      "text": "The transformer attention mechanism allows models to weigh the importance of different input elements...",
+      "title": "Attention Is All You Need",
+      "section": "Methodology",
+      "page": 3,
+      "score": 0.8921,
+      "semantic_score": 0.9100,
+      "keyword_score": 0.7200,
+      "metadata_score": 0.4500,
+      "language": "en",
+      "document_type": "research_paper",
+      "workspace_id": "default",
+      "chunk_index": 5,
+      "word_count": 480,
+      "keywords": ["transformer", "attention", "neural network"]
+    }
+  ],
+  "citations": [
+    "Attention Is All You Need, Methodology, Page 3 (Chunk abc-123…, Score 0.89)"
+  ],
+  "statistics": {
+    "total_chunks_searched": 30,
+    "semantic_chunks_retrieved": 30,
+    "keyword_chunks_scored": 30,
+    "final_chunks_returned": 10,
+    "avg_semantic_score": 0.7521,
+    "avg_keyword_score": 0.5412,
+    "avg_final_score": 0.7123,
+    "semantic_latency_ms": 45.12,
+    "keyword_latency_ms": 2.34,
+    "ranking_latency_ms": 1.23,
+    "total_latency_ms": 48.69
+  },
+  "processing_time_ms": 48.69,
+  "query_analysis": {
+    "language": "en",
+    "intent": "research",
+    "complexity": "moderate",
+    "estimated_depth": 3
+  }
+}
+```
+
+**Errors:**
+- `400` — Empty query
+- `422` — Invalid parameters (top_k out of range, min_score out of range)
+- `503` — Search engine not available
+
+### GET /search/health
+
+Check the hybrid search engine health status.
+
+**Response:**
+```json
+{
+  "ready": true,
+  "embedding_model_loaded": true,
+  "vector_store_healthy": true,
+  "keyword_backend": "BM25",
+  "ranking_weights": {
+    "semantic_weight": 0.65,
+    "keyword_weight": 0.25,
+    "metadata_weight": 0.10
+  },
+  "statistics": {
+    "total_queries": 42,
+    "avg_latency_ms": 52.3,
+    "avg_chunks_searched": 35.0,
+    "avg_chunks_returned": 8.5,
+    "avg_score": 0.71,
+    "p50_latency_ms": 48.0,
+    "p95_latency_ms": 95.0,
+    "p99_latency_ms": 120.0,
+    "recent_queries": ["transformer attention", "machine learning basics"]
+  }
+}
+```
+
+### DELETE /documents/{id}
+
+Deleting a document also removes its embeddings (handled automatically).
+
+---
+
 ## Chunking
 
 ### POST /documents/{id}/chunk

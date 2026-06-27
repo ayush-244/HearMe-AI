@@ -279,6 +279,137 @@ graph TD
 | `EMBEDDING_VERSION` | `1.0.0` | Embedding format version |
 | `EMBEDDING_MAX_SEQ_LENGTH` | `512` | Max tokens per input |
 
+## Vector Store Pipeline
+
+```mermaid
+graph TD
+    subgraph "Indexing Trigger"
+        IX[POST /documents/{id}/index] --> IE{Already Embedded?}
+        IE -->|No| ER[Error: Embed First]
+        IE -->|Yes| QD[QdrantVectorStore.upsert_document]
+    end
+    subgraph "Qdrant Vector Store"
+        QD --> CM[CollectionManager<br/>auto-create collection]
+        QD --> MM[MetadataMapper<br/>payload schema mapping]
+        QD --> BP[Batch Upsert<br/>UUIDv5 point IDs]
+        BP --> RE[Result: chunks_indexed]
+    end
+    subgraph "Deletion"
+        DX[DELETE /documents/{id}/index] --> DR[QdrantVectorStore.delete_document]
+        DR --> DF[Filter + Delete by document_id]
+    end
+    subgraph "Search Flow"
+        SR[POST /search] --> SE[SearchEngine.search]
+        SE --> QP[QueryParser<br/>extract filters + clean query]
+        SE --> QA[QueryAnalyzer<br/>language + intent + complexity]
+        SE --> SM[SemanticSearch<br/>vector_store.search()]
+        SE --> KW[KeywordSearch<br/>BM25 scoring]
+        SE --> HR[HybridRanker<br/>weighted scoring + dedup + diversity]
+        SE --> CB[CitationBuilder<br/>markdown citations]
+        SE --> RM[RetrievalMetrics<br/>latency tracking + statistics]
+    end
+```
+
+## Configuration
+
+### Vector Store Settings
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `QDRANT_HOST` | `localhost` | Qdrant server host |
+| `QDRANT_PORT` | `6333` | Qdrant server port |
+| `QDRANT_COLLECTION` | `documents` | Qdrant collection name |
+| `VECTOR_DIMENSION` | `768` | Embedding vector dimension |
+| `DISTANCE_METRIC` | `Cosine` | Distance metric for vector comparison |
+| `QDRANT_LOCAL_PATH` | `""` | Local path for embedded Qdrant (empty = use remote) |
+
+### Search Engine Settings
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `SEARCH_SEMANTIC_WEIGHT` | `0.65` | Semantic score weight in hybrid ranking |
+| `SEARCH_KEYWORD_WEIGHT` | `0.25` | Keyword score weight in hybrid ranking |
+| `SEARCH_METADATA_WEIGHT` | `0.10` | Metadata boost weight in hybrid ranking |
+| `SEARCH_DEFAULT_TOP_K` | `10` | Default number of results to return |
+| `SEARCH_MAX_CONTEXT_CHUNKS` | `20` | Maximum chunks to return per query |
+| `SEARCH_MINIMUM_SIMILARITY` | `0.0` | Minimum hybrid score threshold |
+| `SEARCH_BM25_K1` | `1.5` | BM25 k1 parameter |
+| `SEARCH_BM25_B` | `0.75` | BM25 b parameter |
+| `SEARCH_SEMANTIC_TOP_K_MULTIPLIER` | `3` | Multiplier for semantic retrieval (more candidates = better ranking) |
+
+## Hybrid Ranking Formula
+
+```
+final_score = semantic_weight × semantic_score
+            + keyword_weight × keyword_score
+            + metadata_weight × metadata_score
+```
+
+Default weights: semantic 0.65, keyword 0.25, metadata 0.10.
+
+### Metadata Boosting Factors
+
+| Condition | Boost | Description |
+|-----------|-------|-------------|
+| Language match | +0.30 | Query language matches chunk language |
+| Document type match | +0.20 | Query type matches chunk type |
+| Title word overlap | +0.25 | Query words appear in chunk title |
+| Section word overlap | +0.15 | Query words appear in section name |
+| High importance | +0.10×(imp-1) | Chunk importance_score > 1.0 |
+| Keyword overlap | +0.10×overlap_ratio | Matching keywords between query and chunk |
+
+Boosts are averaged: `metadata_score = sum(boosts) / max(boost_count, 1)`.
+
+### Deduplication
+
+Uses `difflib.SequenceMatcher` with 0.85 ratio threshold on first 100 characters. Chunks with near-identical text are deduplicated (lower-scoring duplicate removed).
+
+### Section Diversity
+
+Max `ceil(top_k / 3)` chunks per section. If insufficient diverse sections, overflow chunks fill remaining slots.
+
+## Search Engine Query Flow
+
+```text
+Input: SearchQuery(text="transformer attention lang:en", top_k=5)
+           │
+           ▼
+    1. QueryParser.parse()
+       ├── Extracts filters: {"language": "en"}
+       └── Clean query: "transformer attention"
+           │
+           ▼
+    2. QueryAnalyzer.analyze()
+       ├── Language detection → "en"
+       ├── Intent classification → "research"
+       └── Complexity estimation → "moderate"
+           │
+           ▼
+    3. SemanticSearch.search()
+       ├── Embeds query via EmbeddingService
+       ├── Vector search: top_k × 3 candidates (with filters)
+       └── Returns ranked scored results
+           │
+           ▼
+    4. KeywordSearch.score()
+       ├── BM25 scoring on candidate texts
+       └── Adds keyword_score to each chunk
+           │
+           ▼
+    5. HybridRanker.rank()
+       ├── Computes combined score (semantic + keyword + metadata)
+       ├── Deduplicates near-identical texts
+       ├── Enforces section diversity
+       └── Returns top_k final results
+           │
+           ▼
+    6. CitationBuilder.build_citations()
+       └── Generates citation strings for each result
+           │
+           ▼
+    Output: SearchResult with items, citations, statistics
+```
+
 ## Embedding Cache Flow
 
 ```text
@@ -377,3 +508,15 @@ Input: ["text a", "text b", "text a"]
 | EmbeddingModel | Wraps SentenceTransformer with lazy initialization, batch encoding, embedding normalization, zero-vector fallback for empty text |
 | EmbeddingCache | SHA256 checksum-based cache with deduplication, hit/miss tracking, and in-batch duplicate backfill |
 | EmbeddingService | Orchestrates embedding generation — delegates to EmbeddingModel + EmbeddingCache, saves to `uploads/embeddings/{id}.json`, provides CRUD for embeddings, delete cascade |
+| VectorStore (ABC) | Abstract interface for vector storage with `upsert`, `delete`, `search`, `health` methods |
+| QdrantVectorStore | Qdrant implementation of `VectorStore` — point upsert/delete/search, collection management, payload mapping |
+| CollectionManager | Qdrant collection lifecycle — create, delete, check existence, get info, dimension validation |
+| MetadataMapper | Bidirectional mapping between chunk dicts and Qdrant payloads; builds Qdrant filters from generic conditions |
+| SearchEngine | Orchestrates hybrid search — parsing, analysis, semantic+keyword retrieval, ranking, citations, metrics |
+| SemanticSearch | Embeds query and performs vector search via `VectorStore.search()` |
+| KeywordSearch | BM25/TF-IDF scoring on candidate texts with configurable parameters |
+| HybridRanker | Weighted hybrid scoring with metadata boosting, deduplication, and section diversity |
+| QueryParser | Extracts quoted phrases, removes stop words, extracts inline filter prefixes (`lang:`, `type:`, etc.) |
+| QueryAnalyzer | Analyzes query language, intent, complexity, and estimated depth |
+| CitationBuilder | Builds citation strings and markdown-formatted citations from search results |
+| RetrievalMetrics | Tracks query latency, chunks searched/returned, avg scores; p50/p95/p99 percentiles |

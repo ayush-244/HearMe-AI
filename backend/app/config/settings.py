@@ -23,6 +23,23 @@ class Settings(BaseSettings):
     embedding_version: str = "1.0.0"
     embedding_max_seq_length: int = 512
 
+    qdrant_host: str = "localhost"
+    qdrant_port: int = 6333
+    qdrant_collection: str = "knowledge_brain"
+    qdrant_local_path: str = ""
+    vector_dimension: int = 768
+    distance_metric: str = "Cosine"
+
+    search_semantic_weight: float = 0.65
+    search_keyword_weight: float = 0.25
+    search_metadata_weight: float = 0.10
+    search_default_top_k: int = 10
+    search_max_context_chunks: int = 20
+    search_minimum_similarity: float = 0.0
+    search_bm25_k1: float = 1.5
+    search_bm25_b: float = 0.75
+    search_semantic_top_k_multiplier: int = 3
+
     PROJECT_ROOT: ClassVar[Path] = Path(__file__).resolve().parent.parent.parent.parent
     PROMPTS_DIR: ClassVar[Path] = PROJECT_ROOT / "prompts"
     UPLOAD_DIR: ClassVar[Path] = PROJECT_ROOT / "uploads"

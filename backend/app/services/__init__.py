@@ -14,6 +14,8 @@ from .intent_service import IntentService
 from .pipeline_service import PipelineService
 from .document_service import DocumentService
 from .embedding_service import EmbeddingService
+from ..vectorstore.base import VectorStore
+from ..vectorstore.qdrant_store import QdrantVectorStore
 from ai.sentiment.model import SentimentModel
 from ai.language.detector import LanguageDetector
 from ai.emotion.detector import EmotionDetector
@@ -94,9 +96,89 @@ def init_services() -> None:
         max_seq_length=settings.embedding_max_seq_length,
     )
 
+    logger.info("Initializing QdrantVectorStore: host=%s, port=%d, collection=%s",
+                settings.qdrant_host, settings.qdrant_port, settings.qdrant_collection)
+    local_path = settings.qdrant_local_path if settings.qdrant_local_path else None
+    vector_store: VectorStore = QdrantVectorStore(
+        host=settings.qdrant_host,
+        port=settings.qdrant_port,
+        collection_name=settings.qdrant_collection,
+        vector_dimension=settings.vector_dimension,
+        distance_metric=settings.distance_metric,
+        local_path=local_path,
+    )
+    try:
+        vector_store.initialize()
+        logger.info("QdrantVectorStore initialized successfully")
+    except Exception as e:
+        logger.warning("QdrantVectorStore initialization failed (will retry on first use): %s", e)
+
+    embedding_service_with_store = EmbeddingService(
+        embeddings_dir=settings.UPLOAD_DIR / "embeddings",
+        model_name=settings.embedding_model_name,
+        batch_size=settings.embedding_batch_size,
+        embedding_version=settings.embedding_version,
+        max_seq_length=settings.embedding_max_seq_length,
+        vector_store=vector_store,
+    )
+
+    from ..retrieval.search_engine import SearchEngine
+    from ..retrieval.semantic_search import SemanticSearch
+    from ..retrieval.keyword_search import KeywordSearch
+    from ..retrieval.hybrid_ranker import HybridRanker
+    from ..retrieval.query_analyzer import QueryAnalyzer
+    from ..retrieval.retrieval_metrics import RetrievalMetrics
+
+    logger.info("Initializing Search Engine: weights=(sem=%.2f, kw=%.2f, meta=%.2f), top_k=%d",
+                settings.search_semantic_weight, settings.search_keyword_weight,
+                settings.search_metadata_weight, settings.search_default_top_k)
+
+    semantic_search = SemanticSearch(
+        embedding_service=embedding_service,
+        vector_store=vector_store,
+        top_k=settings.search_default_top_k * settings.search_semantic_top_k_multiplier,
+        min_score=settings.search_minimum_similarity,
+    )
+
+    keyword_search = KeywordSearch(
+        bm25_k1=settings.search_bm25_k1,
+        bm25_b=settings.search_bm25_b,
+    )
+
+    hybrid_ranker = HybridRanker(
+        semantic_weight=settings.search_semantic_weight,
+        keyword_weight=settings.search_keyword_weight,
+        metadata_weight=settings.search_metadata_weight,
+        default_top_k=settings.search_default_top_k,
+        max_context_chunks=settings.search_max_context_chunks,
+        minimum_similarity=settings.search_minimum_similarity,
+    )
+
+    query_analyzer = QueryAnalyzer(
+        language_service=language_service,
+        intent_service=intent_service,
+    )
+
+    metrics = RetrievalMetrics()
+
+    search_engine = SearchEngine(
+        semantic_search=semantic_search,
+        keyword_search=keyword_search,
+        hybrid_ranker=hybrid_ranker,
+        query_analyzer=query_analyzer,
+        metrics=metrics,
+        top_k=settings.search_default_top_k,
+        min_score=settings.search_minimum_similarity,
+    )
+
+    logger.info("Search Engine initialized: BM25=%s", keyword_search._use_bm25)
+
     _services = {
         "document": document_service,
         "embedding": embedding_service,
+        "embedding_with_store": embedding_service_with_store,
+        "vector_store": vector_store,
+        "search_engine": search_engine,
         "sentiment": sentiment_service,
         "language": language_service,
         "prompt": prompt_service,
