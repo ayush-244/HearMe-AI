@@ -327,7 +327,7 @@ class TestImportanceScorer:
     def test_base_importance_semantic(self):
         scorer = ImportanceScorer()
         entry = MemoryEntry(content="I study CS.", type=MemoryType.SEMANTIC)
-        assert scorer._base_importance(entry) == 0.7
+        assert scorer._base_importance(entry) == 0.85
 
     def test_base_importance_preference(self):
         scorer = ImportanceScorer()

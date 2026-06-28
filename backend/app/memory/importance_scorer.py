@@ -7,6 +7,7 @@ from .memory_models import MemoryEntry, MemoryType
 
 logger = logging.getLogger(__name__)
 
+_SELF_REFERENCE = re.compile(r"\b(i|my|me|mine|myself)\b", re.IGNORECASE)
 _PROPER_NOUN = re.compile(r"\b[A-Z][a-z]{2,}\b")
 _DIGIT = re.compile(r"\d+")
 _EMPHASIS = re.compile(r"[!]{2,}|[A-Z]{4,}")
@@ -58,7 +59,7 @@ class ImportanceScorer:
 
     def _base_importance(self, entry: MemoryEntry) -> float:
         type_scores = {
-            MemoryType.SEMANTIC: 0.7,
+            MemoryType.SEMANTIC: 0.85,
             MemoryType.PREFERENCE: 0.6,
             MemoryType.EPISODIC: 0.4,
             MemoryType.WORKING: 0.1,
@@ -140,6 +141,8 @@ class ImportanceScorer:
         score = min(len(useful_signals) * 0.08, 0.4)
         if len(text.split()) > 8:
             score += 0.1
+        if _SELF_REFERENCE.search(text) and _PROPER_NOUN.search(text):
+            score += 0.2
         return round(min(score, 0.5), 2)
 
     @property

@@ -29,6 +29,7 @@ class DocumentMetadata(BaseModel):
     status: DocumentStatus
     upload_time: datetime
     storage_path: str
+    failed_stage: Optional[str] = None
 
 
 class UploadResponse(BaseModel):
@@ -46,6 +47,7 @@ class DocumentListItem(BaseModel):
     size: int
     status: DocumentStatus
     upload_time: datetime
+    failed_stage: Optional[str] = None
 
 
 class DocumentListResponse(BaseModel):
@@ -205,3 +207,17 @@ class VectorStoreHealthResponse(BaseModel):
     status: str
     collection: str
     vectors: int
+
+
+class RetryResponse(BaseModel):
+    status: str
+    document_id: str
+    stage: str
+    message: str
+
+
+class FailedResponse(BaseModel):
+    status: str
+    document_id: str
+    failed_stage: str
+    message: str

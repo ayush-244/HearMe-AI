@@ -1,0 +1,32 @@
+{
+  "chunks": [
+    {
+      "chunk_id": "f5acc213-9796-4f0e-b520-32fe35ee48fb",
+      "document_id": "d721bcd2-b2e0-44f1-8138-c65704f90604",
+      "section_name": "body",
+      "text": "The HearMe AI Document Processing Pipeline This is a comprehensive test document for pipeline verification. It contains multiple paragraphs and sentence The HearMe AI system processes documents through a complete pipeline that transforms raw PDF files into This document is designed to test all stages of the pipeline end-to-end. Machine learning and natural langua",
+      "chunk_index": 0,
+      "page_start": 0,
+      "page_end": 0,
+      "start_offset": 0,
+      "end_offset": 365,
+      "word_count": 54,
+      "character_count": 365,
+      "estimated_tokens": 70,
+      "overlap_previous": "",
+      "overlap_next": "",
+      "metadata": {}
+    }
+  ],
+  "statistics": {
+    "document_id": "d721bcd2-b2e0-44f1-8138-c65704f90604",
+    "chunks": 1,
+    "average_chunk_size": 54.0,
+    "largest_chunk": 54,
+    "smallest_chunk": 54,
+    "strategy": "fixed"
+  },
+  "strategy": "fixed",
+  "duration_seconds": 0.0,
+  "rejected_count": 0
+}

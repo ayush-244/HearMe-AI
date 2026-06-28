@@ -7,7 +7,8 @@ logger = logging.getLogger(__name__)
 
 _TYPE_KEYWORDS = {
     MemoryType.SEMANTIC: [
-        "i am", "i'm", "my name", "i study", "i work", "i use",
+        "i am", "i'm", "my name", "myself", "call me",
+        "i study", "i work", "i use",
         "i have", "i live", "i know", "i learned", "i can",
         "i cannot", "i don't", "i do not", "i speak", "i code",
         "i program", "i write", "fact", "remember that",

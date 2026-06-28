@@ -84,6 +84,12 @@ export const api = {
   deindexDocument: (id: string) =>
     request<{ status: string }>(`/documents/${id}/index`, { method: "DELETE" }),
 
+  retryDocument: (id: string) =>
+    request<{ status: string; document_id: string; stage: string; message: string }>(`/documents/${id}/retry`, { method: "POST" }),
+
+  getFailedDetails: (id: string) =>
+    request<{ status: string; document_id: string; failed_stage: string; message: string }>(`/documents/${id}/failed`),
+
   // Search
   search: (query: SearchQuery) =>
     request<SearchResponse>("/search", { method: "POST", body: JSON.stringify(query) }),

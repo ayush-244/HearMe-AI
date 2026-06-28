@@ -199,6 +199,7 @@ class DocumentService:
                     size=meta.size,
                     status=meta.status,
                     upload_time=meta.upload_time,
+                    failed_stage=meta.failed_stage,
                 )
             )
         items.sort(key=lambda x: x.upload_time, reverse=True)
@@ -595,4 +596,28 @@ class DocumentService:
         meta = self._metadata.get(document_id)
         if meta:
             meta.status = status
+            if status != DocumentStatus.failed:
+                meta.failed_stage = None
             self._save_metadata()
+
+    def set_failed(self, document_id: str, stage: str) -> None:
+        meta = self._metadata.get(document_id)
+        if meta:
+            meta.status = DocumentStatus.failed
+            meta.failed_stage = stage
+            self._save_metadata()
+            logger.warning("Document %s marked as failed at stage: %s", document_id, stage)
+
+    def get_failed_stage(self, document_id: str) -> Optional[str]:
+        meta = self._metadata.get(document_id)
+        if meta and meta.status == DocumentStatus.failed:
+            return meta.failed_stage
+        return None
+
+    def clear_failed(self, document_id: str) -> None:
+        meta = self._metadata.get(document_id)
+        if meta and meta.status == DocumentStatus.failed:
+            meta.status = DocumentStatus.uploaded
+            meta.failed_stage = None
+            self._save_metadata()
+            logger.info("Cleared failed status for document %s", document_id)

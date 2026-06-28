@@ -19,6 +19,8 @@ from ..schemas.document import (
     EmbeddingChunkResponse,
     IndexResponse,
     DeindexResponse,
+    RetryResponse,
+    FailedResponse,
 )
 from ..services import get_services
 from ..services.document_service import DocumentValidationError, DocumentExtractionError
@@ -94,7 +96,12 @@ async def extract_document(document_id: str):
         return result
     except DocumentExtractionError as e:
         logger.warning("/documents/{id}/extract error: %s — %s", document_id, e.message)
+        doc_service.set_failed(document_id, "extract")
         raise HTTPException(status_code=e.status_code, detail=e.message)
+    except Exception as e:
+        logger.error("/documents/{id}/extract unexpected error: %s", document_id, exc_info=True)
+        doc_service.set_failed(document_id, "extract")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/documents/{document_id}/content", response_model=ContentResponse)
@@ -132,7 +139,12 @@ async def analyze_document(document_id: str):
         return result
     except DocumentExtractionError as e:
         logger.warning("/documents/{id}/analyze error: %s — %s", document_id, e.message)
+        doc_service.set_failed(document_id, "analyze")
         raise HTTPException(status_code=e.status_code, detail=e.message)
+    except Exception as e:
+        logger.error("/documents/{id}/analyze unexpected error: %s", document_id, exc_info=True)
+        doc_service.set_failed(document_id, "analyze")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/documents/{document_id}/analysis")
@@ -173,7 +185,12 @@ async def chunk_document(document_id: str):
         )
     except DocumentExtractionError as e:
         logger.warning("/documents/{id}/chunk error: %s — %s", document_id, e.message)
+        doc_service.set_failed(document_id, "chunk")
         raise HTTPException(status_code=e.status_code, detail=e.message)
+    except Exception as e:
+        logger.error("/documents/{id}/chunk unexpected error: %s", document_id, exc_info=True)
+        doc_service.set_failed(document_id, "chunk")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/documents/{document_id}/chunks", response_model=ChunkListResponse)
@@ -250,6 +267,7 @@ async def embed_document(document_id: str):
 
     chunks_data = doc_service.get_chunks_data(document_id)
     if chunks_data is None:
+        doc_service.set_failed(document_id, "embed")
         raise HTTPException(status_code=400, detail="Document must be chunked before embedding")
 
     try:
@@ -268,7 +286,12 @@ async def embed_document(document_id: str):
         )
     except EmbeddingError as e:
         logger.warning("/documents/{id}/embed error: %s — %s", document_id, e.message)
+        doc_service.set_failed(document_id, "embed")
         raise HTTPException(status_code=e.status_code, detail=e.message)
+    except Exception as e:
+        logger.error("/documents/{id}/embed unexpected error: %s", document_id, exc_info=True)
+        doc_service.set_failed(document_id, "embed")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/documents/{document_id}/embeddings", response_model=EmbeddingListResponse)
@@ -323,6 +346,7 @@ async def index_document(document_id: str):
 
     chunks_data = doc_service.get_chunks_data(document_id)
     if chunks_data is None:
+        doc_service.set_failed(document_id, "index")
         raise HTTPException(status_code=400, detail="Document must be chunked before indexing")
 
     analysis = doc_service.get_analysis(document_id)
@@ -341,9 +365,11 @@ async def index_document(document_id: str):
         )
     except EmbeddingError as e:
         logger.warning("/documents/{id}/index error: %s — %s", document_id, e.message)
+        doc_service.set_failed(document_id, "index")
         raise HTTPException(status_code=e.status_code, detail=e.message)
     except Exception as e:
         logger.error("/documents/{id}/index unexpected error: %s", document_id, exc_info=True)
+        doc_service.set_failed(document_id, "index")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -377,3 +403,54 @@ async def deindex_document(document_id: str):
     except Exception as e:
         logger.error("/documents/{id}/index DELETE unexpected error: %s", document_id, exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/documents/{document_id}/failed", response_model=FailedResponse)
+async def get_failed_details(document_id: str):
+    services = get_services()
+    doc_service = services["document"]
+
+    meta = doc_service.get_metadata(document_id)
+    if meta is None:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    if meta.status != DocumentStatus.failed:
+        raise HTTPException(status_code=400, detail="Document is not in failed state")
+
+    return FailedResponse(
+        status="failed",
+        document_id=document_id,
+        failed_stage=meta.failed_stage or "unknown",
+        message=f"Processing failed at stage: {meta.failed_stage or 'unknown'}",
+    )
+
+
+@router.post("/documents/{document_id}/retry")
+async def retry_document(document_id: str):
+    services = get_services()
+    doc_service = services["document"]
+
+    logger.info("/documents/{id}/retry request: id=%s", document_id)
+
+    meta = doc_service.get_metadata(document_id)
+    if meta is None:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    if meta.status != DocumentStatus.failed:
+        raise HTTPException(status_code=400, detail="Document is not in failed state")
+
+    failed_stage = doc_service.get_failed_stage(document_id)
+    if failed_stage is None:
+        failed_stage = "uploaded"
+
+    # Clear failed status so the next endpoint can process
+    doc_service.clear_failed(document_id)
+
+    logger.info("/documents/{id}/retry: will retry from stage '%s'", document_id, failed_stage)
+
+    return RetryResponse(
+        status="retrying",
+        document_id=document_id,
+        stage=failed_stage,
+        message=f"Retrying from stage: {failed_stage}",
+    )

@@ -31,14 +31,14 @@ _ACKNOWLEDGMENT_PATTERNS = re.compile(
 )
 
 _FACT_PREFIXES = re.compile(
-    r"\b(i am|i'?m|my name is|i study|i work|i use|i have|"
+    r"\b(i am|i'?m|my name is|myself|call me|i study|i work|i use|i have|"
     r"i live|i like|i love|i prefer|i enjoy|i hate|i dislike|"
     r"i know|i learned|i can|i cannot|i don'?t|i do not|"
     r"i think|i believe|i feel|my favorite|my favourite)\b",
     re.IGNORECASE,
 )
 
-_SELF_REFERENCE = re.compile(r"\b(i|my|me|mine)\b", re.IGNORECASE)
+_SELF_REFERENCE = re.compile(r"\b(i|my|me|mine|myself)\b", re.IGNORECASE)
 
 _PREFERENCE_SIGNALS = re.compile(
     r"\b(prefer|like|love|favourite|favorite|enjoy|would rather|"
@@ -52,7 +52,7 @@ _DIGIT = re.compile(r"\d+")
 
 
 class MemoryExtractor:
-    def __init__(self, min_content_length: int = 15):
+    def __init__(self, min_content_length: int = 3):
         self._min_content_length = min_content_length
         logger.info("MemoryExtractor initialized: min_content_length=%d", min_content_length)
 
@@ -124,16 +124,17 @@ class MemoryExtractor:
         return entry
 
     def _is_noise(self, text: str) -> bool:
-        if len(text.split()) <= 3:
+        word_count = len(text.split())
+        if word_count <= 2 and not _SELF_REFERENCE.search(text) and not _FACT_PREFIXES.search(text):
             return True
-        if _GREETING_PATTERNS.search(text) and len(text.split()) <= 6:
+        if _GREETING_PATTERNS.search(text) and word_count <= 6:
             return True
-        if _FAREWELL_PATTERNS.search(text) and len(text.split()) <= 6:
+        if _FAREWELL_PATTERNS.search(text) and word_count <= 6:
             return True
         if _SMALL_TALK_PATTERNS.search(text):
             return True
         first_word = text.strip().lower().rstrip(".,!?").split()[0] if text.strip() else ""
-        if first_word in {"ok", "okay", "thanks", "thank", "ty", "sure", "yes", "no", "got", "k"} and len(text.split()) <= 5:
+        if first_word in {"ok", "okay", "thanks", "thank", "ty", "sure", "yes", "no", "got", "k"} and word_count <= 5:
             return True
         if re.match(r"^[\s\W]+$", text):
             return True

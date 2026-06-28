@@ -98,6 +98,7 @@ export interface Document {
   status: string
   upload_time: string
   storage_path?: string
+  failed_stage?: string
 }
 
 export interface MemoryEntry {

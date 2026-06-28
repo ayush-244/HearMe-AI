@@ -16,5 +16,41 @@
     "checksum": "d0a091a9b340b88c",
     "source": "conversation",
     "pinned": false
+  },
+  {
+    "memory_id": "ecf2474a-8e92-4061-9ed5-4497ef91c2be",
+    "user_id": "",
+    "workspace_id": "default",
+    "type": "working",
+    "content": "My favourite language is Python",
+    "summary": "My favourite language is Python",
+    "importance": 0.1175,
+    "confidence": 0.5,
+    "created_at": "2026-06-28T09:51:27.745031+00:00",
+    "updated_at": "2026-06-28T09:51:27.745031+00:00",
+    "last_accessed": "2026-06-28T09:51:27.745031+00:00",
+    "access_count": 0,
+    "embedding_version": "",
+    "checksum": "e603a744a0b2f9d7",
+    "source": "conversation",
+    "pinned": false
+  },
+  {
+    "memory_id": "6b8b10fe-d0ac-4d2f-bd51-e543c8c08c42",
+    "user_id": "",
+    "workspace_id": "default",
+    "type": "working",
+    "content": "I study at SRM University AP",
+    "summary": "I study at SRM University AP",
+    "importance": 0.1255,
+    "confidence": 0.5,
+    "created_at": "2026-06-28T09:52:04.688121+00:00",
+    "updated_at": "2026-06-28T09:52:04.688121+00:00",
+    "last_accessed": "2026-06-28T09:52:04.688121+00:00",
+    "access_count": 0,
+    "embedding_version": "",
+    "checksum": "484111616505a997",
+    "source": "conversation",
+    "pinned": false
   }
 ]

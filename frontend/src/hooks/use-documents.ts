@@ -38,3 +38,8 @@ export function useIndexDocument() {
   const qc = useQueryClient()
   return useMutation({ mutationFn: (id: string) => api.indexDocument(id), onSuccess: () => { qc.invalidateQueries({ queryKey: ["document"] }); qc.invalidateQueries({ queryKey: ["documents"] }) } })
 }
+
+export function useRetryDocument() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (id: string) => api.retryDocument(id), onSuccess: () => { qc.invalidateQueries({ queryKey: ["document"] }); qc.invalidateQueries({ queryKey: ["documents"] }) } })
+}

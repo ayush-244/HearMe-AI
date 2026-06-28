@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useMemo, memo, useCallback } from "react"
-import { useDocuments, useDeleteDocument, useExtractDocument, useAnalyzeDocument, useChunkDocument, useEmbedDocument, useIndexDocument } from "@/hooks/use-documents"
+import { useDocuments, useDeleteDocument, useExtractDocument, useAnalyzeDocument, useChunkDocument, useEmbedDocument, useIndexDocument, useRetryDocument } from "@/hooks/use-documents"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -21,11 +21,14 @@ import {
   Clock,
   CheckCircle2,
   RefreshCw,
+  AlertCircle,
+  RotateCcw,
 } from "lucide-react"
 import { formatDate } from "@/lib/utils"
 import { motion, AnimatePresence } from "framer-motion"
 import { toast } from "@/components/ui/toast"
 import { api } from "@/services/api-client"
+import { useDeveloperStore } from "@/stores/developer-store"
 import type { Document } from "@/types"
 
 const FileIcon = memo(function FileIcon({ type }: { type: string }) {
@@ -34,13 +37,19 @@ const FileIcon = memo(function FileIcon({ type }: { type: string }) {
   return <Icon className="h-5 w-5 text-muted-foreground" />
 })
 
-const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
+const userStatus: Record<string, { label: string; color: string; bg: string }> = {
+  indexed: { label: "Ready \u2713", color: "text-emerald-500", bg: "bg-emerald-500/10" },
+  failed: { label: "Failed", color: "text-red-500", bg: "bg-red-500/10" },
+}
+
+const techStatus: Record<string, { label: string; color: string; bg: string }> = {
   uploaded: { label: "Uploaded", color: "text-amber-500", bg: "bg-amber-500/10" },
   extracted: { label: "Extracted", color: "text-blue-500", bg: "bg-blue-500/10" },
   analyzed: { label: "Analyzed", color: "text-purple-500", bg: "bg-purple-500/10" },
   chunked: { label: "Chunked", color: "text-cyan-500", bg: "bg-cyan-500/10" },
   embedded: { label: "Embedded", color: "text-indigo-500", bg: "bg-indigo-500/10" },
   indexed: { label: "Indexed", color: "text-emerald-500", bg: "bg-emerald-500/10" },
+  failed: { label: "Failed", color: "text-red-500", bg: "bg-red-500/10" },
 }
 
 const pipelineActions: Record<string, { label: string; nextStatus: string }> = {
@@ -51,7 +60,30 @@ const pipelineActions: Record<string, { label: string; nextStatus: string }> = {
   embedded: { label: "Index", nextStatus: "indexed" },
 }
 
-const DocumentCard = memo(function DocumentCard({ doc, onDelete, onProcess }: { doc: Document; onDelete: (id: string) => void; onProcess: (id: string, status: string) => void }) {
+const friendlyLabels: Record<string, string> = {
+  extract: "Reading document\u2026",
+  analyze: "Understanding content\u2026",
+  chunk: "Building knowledge\u2026",
+  embed: "Building knowledge\u2026",
+  index: "Ready \u2713",
+}
+
+type PipelineStatus = "running" | "failed" | "completed"
+interface PipelineState {
+  status: PipelineStatus
+  message: string
+  error?: string
+}
+
+interface DocumentCardProps {
+  doc: Document
+  onDelete: (id: string) => void
+  onProcess: (id: string, status: string) => void
+  pipelineProgress?: PipelineState
+  developerMode: boolean
+}
+
+const DocumentCard = memo(function DocumentCard({ doc, onDelete, onProcess, pipelineProgress, developerMode }: DocumentCardProps) {
   const [deleting, setDeleting] = useState(false)
   const [processing, setProcessing] = useState(false)
 
@@ -66,21 +98,31 @@ const DocumentCard = memo(function DocumentCard({ doc, onDelete, onProcess }: { 
     setDeleting(false)
   }, [doc.id, onDelete])
 
-  const status = statusConfig[doc.status] || statusConfig.uploaded
-  const nextAction = pipelineActions[doc.status]
+  const isFailed = doc.status === "failed"
   const isIndexed = doc.status === "indexed"
+  const isRunning = pipelineProgress?.status === "running"
 
-  const handleProcess = useCallback(async () => {
-    if (!nextAction) return
+  const nextAction = pipelineActions[doc.status]
+  const retryAction = isFailed && developerMode && doc.failed_stage ? pipelineActions[doc.failed_stage] : undefined
+
+  const status = isRunning
+    ? { label: pipelineProgress!.message, color: "text-blue-500", bg: "bg-blue-500/10" }
+    : isFailed
+      ? techStatus.failed
+      : developerMode
+        ? (techStatus[doc.status] || techStatus.uploaded)
+        : (userStatus[doc.status] || { label: "Pending", color: "text-muted-foreground", bg: "bg-muted/10" })
+
+  const handleProcess = useCallback(async (targetStatus: string) => {
     setProcessing(true)
     try {
-      await onProcess(doc.id, nextAction.nextStatus)
-      toast({ title: `${nextAction.label} successful`, variant: "success" })
+      await onProcess(doc.id, targetStatus)
+      toast({ title: "Stage completed", variant: "success" })
     } catch {
-      toast({ title: `${nextAction.label} failed`, variant: "destructive" })
+      toast({ title: "Stage failed", variant: "destructive" })
     }
     setProcessing(false)
-  }, [doc.id, nextAction, onProcess])
+  }, [doc.id, onProcess])
 
   return (
     <motion.div
@@ -107,30 +149,76 @@ const DocumentCard = memo(function DocumentCard({ doc, onDelete, onProcess }: { 
                 </span>
               </div>
               <div className="mt-2 flex items-center gap-2">
-                <Badge variant="secondary" className={`${status.color} ${status.bg} border-0 text-[11px]`}>
-                  <CheckCircle2 className="h-3 w-3 mr-1" />
-                  {status.label}
-                </Badge>
-                {nextAction && !isIndexed && (
+                {isRunning ? (
+                  <Badge variant="secondary" className="text-blue-500 bg-blue-500/10 border-0 text-[11px]">
+                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                    {pipelineProgress!.message}
+                  </Badge>
+                ) : isFailed ? (
+                  <Badge variant="secondary" className="text-red-500 bg-red-500/10 border-0 text-[11px]">
+                    <AlertCircle className="h-3 w-3 mr-1" />
+                    Failed
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary" className={`${status.color} ${status.bg} border-0 text-[11px]`}>
+                    {isIndexed ? <CheckCircle2 className="h-3 w-3 mr-1" /> : null}
+                    {status.label}
+                  </Badge>
+                )}
+
+                {developerMode && nextAction && !isIndexed && !isFailed && (
                   <Button
                     variant="outline"
                     size="sm"
                     className="h-6 text-[11px] px-2"
-                    onClick={handleProcess}
-                    disabled={processing}
+                    onClick={() => handleProcess(nextAction.nextStatus)}
+                    disabled={processing || isRunning}
                   >
                     {processing ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <RefreshCw className="h-3 w-3 mr-1" />}
                     {nextAction.label}
                   </Button>
                 )}
+
+                {developerMode && retryAction && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-6 text-[11px] px-2 text-amber-600 border-amber-600/30"
+                    onClick={() => handleProcess(retryAction.nextStatus)}
+                    disabled={processing}
+                  >
+                    <RotateCcw className="h-3 w-3 mr-1" />
+                    Retry {retryAction.label}
+                  </Button>
+                )}
+
+                {!developerMode && isFailed && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-6 text-[11px] px-2 text-red-500 border-red-500/30"
+                    onClick={() => handleProcess("retry")}
+                    disabled={processing}
+                  >
+                    <RotateCcw className="h-3 w-3 mr-1" />
+                    Retry
+                  </Button>
+                )}
+
+                {!developerMode && !isRunning && !isFailed && !isIndexed && (
+                  <span className="text-[11px] text-muted-foreground">Awaiting processing\u2026</span>
+                )}
               </div>
+              {isFailed && pipelineProgress?.error && !developerMode && (
+                <p className="text-xs text-red-500 mt-1 truncate max-w-[200px]">{pipelineProgress.error}</p>
+              )}
             </div>
             <Button
               variant="ghost"
               size="icon"
               className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
               onClick={handleDelete}
-              disabled={deleting}
+              disabled={deleting || isRunning}
             >
               {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4 text-destructive" />}
             </Button>
@@ -141,7 +229,15 @@ const DocumentCard = memo(function DocumentCard({ doc, onDelete, onProcess }: { 
   )
 })
 
-const DocumentRow = memo(function DocumentRow({ doc, onDelete, onProcess }: { doc: Document; onDelete: (id: string) => void; onProcess: (id: string, status: string) => void }) {
+interface DocumentRowProps {
+  doc: Document
+  onDelete: (id: string) => void
+  onProcess: (id: string, status: string) => void
+  pipelineProgress?: PipelineState
+  developerMode: boolean
+}
+
+const DocumentRow = memo(function DocumentRow({ doc, onDelete, onProcess, pipelineProgress, developerMode }: DocumentRowProps) {
   const [deleting, setDeleting] = useState(false)
   const [processing, setProcessing] = useState(false)
 
@@ -156,21 +252,31 @@ const DocumentRow = memo(function DocumentRow({ doc, onDelete, onProcess }: { do
     setDeleting(false)
   }, [doc.id, onDelete])
 
-  const status = statusConfig[doc.status] || statusConfig.uploaded
-  const nextAction = pipelineActions[doc.status]
+  const isFailed = doc.status === "failed"
   const isIndexed = doc.status === "indexed"
+  const isRunning = pipelineProgress?.status === "running"
 
-  const handleProcess = useCallback(async () => {
-    if (!nextAction) return
+  const nextAction = pipelineActions[doc.status]
+  const retryAction = isFailed && developerMode && doc.failed_stage ? pipelineActions[doc.failed_stage] : undefined
+
+  const status = isRunning
+    ? { label: pipelineProgress!.message, color: "text-blue-500", bg: "bg-blue-500/10" }
+    : isFailed
+      ? techStatus.failed
+      : developerMode
+        ? (techStatus[doc.status] || techStatus.uploaded)
+        : (userStatus[doc.status] || { label: "Pending", color: "text-muted-foreground", bg: "bg-muted/10" })
+
+  const handleProcess = useCallback(async (targetStatus: string) => {
     setProcessing(true)
     try {
-      await onProcess(doc.id, nextAction.nextStatus)
-      toast({ title: `${nextAction.label} successful`, variant: "success" })
+      await onProcess(doc.id, targetStatus)
+      toast({ title: "Stage completed", variant: "success" })
     } catch {
-      toast({ title: `${nextAction.label} failed`, variant: "destructive" })
+      toast({ title: "Stage failed", variant: "destructive" })
     }
     setProcessing(false)
-  }, [doc.id, nextAction, onProcess])
+  }, [doc.id, onProcess])
 
   return (
     <motion.div
@@ -186,29 +292,74 @@ const DocumentRow = memo(function DocumentRow({ doc, onDelete, onProcess }: { do
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium truncate">{doc.filename}</p>
           <p className="text-xs text-muted-foreground">{formatDate(doc.upload_time)}</p>
+          {isFailed && pipelineProgress?.error && !developerMode && (
+            <p className="text-xs text-red-500 mt-0.5 truncate max-w-[200px]">{pipelineProgress.error}</p>
+          )}
         </div>
-        <Badge variant="secondary" className={`${status.color} ${status.bg} border-0 text-[11px] shrink-0`}>
-          {status.label}
-        </Badge>
-        {nextAction && !isIndexed && (
+
+        {isRunning ? (
+          <Badge variant="secondary" className="text-blue-500 bg-blue-500/10 border-0 text-[11px] shrink-0">
+            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+            {pipelineProgress!.message}
+          </Badge>
+        ) : isFailed ? (
+          <Badge variant="secondary" className="text-red-500 bg-red-500/10 border-0 text-[11px] shrink-0">
+            <AlertCircle className="h-3 w-3 mr-1" />
+            Failed
+          </Badge>
+        ) : (
+          <Badge variant="secondary" className={`${status.color} ${status.bg} border-0 text-[11px] shrink-0`}>
+            {isIndexed ? <CheckCircle2 className="h-3 w-3 mr-1" /> : null}
+            {status.label}
+          </Badge>
+        )}
+
+        {developerMode && nextAction && !isIndexed && !isFailed && (
           <Button
             variant="outline"
             size="sm"
             className="h-7 text-[11px] px-2 shrink-0"
-            onClick={handleProcess}
-            disabled={processing}
+            onClick={() => handleProcess(nextAction.nextStatus)}
+            disabled={processing || isRunning}
           >
             {processing ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <RefreshCw className="h-3 w-3 mr-1" />}
             {nextAction.label}
           </Button>
         )}
+
+        {developerMode && retryAction && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-[11px] px-2 shrink-0 text-amber-600 border-amber-600/30"
+            onClick={() => handleProcess(retryAction.nextStatus)}
+            disabled={processing}
+          >
+            <RotateCcw className="h-3 w-3 mr-1" />
+            Retry {retryAction.label}
+          </Button>
+        )}
+
+        {!developerMode && isFailed && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-[11px] px-2 shrink-0 text-red-500 border-red-500/30"
+            onClick={() => handleProcess("retry")}
+            disabled={processing}
+          >
+            <RotateCcw className="h-3 w-3 mr-1" />
+            Retry
+          </Button>
+        )}
+
         <span className="text-xs text-muted-foreground shrink-0">{(doc.size / 1024).toFixed(0)} KB</span>
         <Button
           variant="ghost"
           size="icon"
           className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
           onClick={handleDelete}
-          disabled={deleting}
+          disabled={deleting || isRunning}
         >
           {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4 text-destructive" />}
         </Button>
@@ -225,11 +376,14 @@ export default function DocumentsPage() {
   const chunkDoc = useChunkDocument()
   const embedDoc = useEmbedDocument()
   const indexDoc = useIndexDocument()
+  const retryDoc = useRetryDocument()
+  const developerMode = useDeveloperStore((s) => s.developerMode)
   const [uploading, setUploading] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isDragOver, setIsDragOver] = useState(false)
+  const [pipelineProgress, setPipelineProgress] = useState<Record<string, PipelineState>>({})
 
   const documents = useMemo(() => {
     const docs = data?.documents ?? []
@@ -241,36 +395,106 @@ export default function DocumentsPage() {
   const counts = useMemo(() => ({
     total: data?.documents?.length ?? 0,
     indexed: data?.documents?.filter((d) => d.status === "indexed").length ?? 0,
-    processing: data?.documents?.filter((d) => d.status !== "indexed" && d.status !== "uploaded").length ?? 0,
+    failed: data?.documents?.filter((d) => d.status === "failed").length ?? 0,
+    processing: data?.documents?.filter((d) => d.status !== "indexed" && d.status !== "uploaded" && d.status !== "failed").length ?? 0,
   }), [data])
+
+  const runPipeline = useCallback(async (docId: string) => {
+    const stages = ["extract", "analyze", "chunk", "embed", "index"]
+
+    setPipelineProgress((prev) => ({
+      ...prev,
+      [docId]: { status: "running", message: friendlyLabels.extract },
+    }))
+
+    for (const stage of stages) {
+      setPipelineProgress((prev) => ({
+        ...prev,
+        [docId]: { status: "running", message: friendlyLabels[stage] },
+      }))
+
+      try {
+        switch (stage) {
+          case "extract":
+            await extractDoc.mutateAsync(docId)
+            break
+          case "analyze":
+            await analyzeDoc.mutateAsync(docId)
+            break
+          case "chunk":
+            await chunkDoc.mutateAsync(docId)
+            break
+          case "embed":
+            await embedDoc.mutateAsync(docId)
+            break
+          case "index":
+            await indexDoc.mutateAsync(docId)
+            break
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Processing failed"
+        setPipelineProgress((prev) => ({
+          ...prev,
+          [docId]: { status: "failed", message: "Failed", error: msg },
+        }))
+        refetch()
+        return
+      }
+    }
+
+    setPipelineProgress((prev) => ({
+      ...prev,
+      [docId]: { status: "completed", message: "Ready \u2713" },
+    }))
+    refetch()
+  }, [extractDoc, analyzeDoc, chunkDoc, embedDoc, indexDoc, refetch])
 
   const handleUpload = useCallback(async (file: File) => {
     setUploading(true)
     try {
-      await api.uploadDocument(file)
-      toast({ title: "Upload successful", description: file.name, variant: "success" })
+      const result = await api.uploadDocument(file) as { document_id: string }
+      const docId = result.document_id
       refetch()
+
+      if (!developerMode) {
+        await runPipeline(docId)
+      }
     } catch {
       toast({ title: "Upload failed", variant: "destructive" })
     }
     setUploading(false)
-  }, [refetch])
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""
+    }
+  }, [refetch, developerMode, runPipeline])
 
   const handleDelete = useCallback(async (id: string) => {
     await deleteDoc.mutateAsync(id)
+    setPipelineProgress((prev) => {
+      const next = { ...prev }
+      delete next[id]
+      return next
+    })
     refetch()
   }, [deleteDoc, refetch])
 
-  const handleProcess = useCallback(async (id: string, nextStatus: string) => {
-    switch (nextStatus) {
+  const handleProcess = useCallback(async (id: string, targetStatus: string) => {
+    if (targetStatus === "retry") {
+      await retryDoc.mutateAsync(id)
+      await runPipeline(id)
+      return
+    }
+
+    switch (targetStatus) {
       case "extracted": await extractDoc.mutateAsync(id); break
       case "analyzed": await analyzeDoc.mutateAsync(id); break
       case "chunked": await chunkDoc.mutateAsync(id); break
       case "embedded": await embedDoc.mutateAsync(id); break
       case "indexed": await indexDoc.mutateAsync(id); break
+      default: return
     }
     refetch()
-  }, [extractDoc, analyzeDoc, chunkDoc, embedDoc, indexDoc, refetch])
+  }, [extractDoc, analyzeDoc, chunkDoc, embedDoc, indexDoc, retryDoc, runPipeline, refetch])
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -389,7 +613,14 @@ export default function DocumentsPage() {
           {viewMode === "grid" ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {documents.map((doc) => (
-                <DocumentCard key={doc.id} doc={doc} onDelete={handleDelete} onProcess={handleProcess} />
+                <DocumentCard
+                  key={doc.id}
+                  doc={doc}
+                  onDelete={handleDelete}
+                  onProcess={handleProcess}
+                  pipelineProgress={pipelineProgress[doc.id]}
+                  developerMode={developerMode}
+                />
               ))}
             </div>
           ) : (
@@ -398,7 +629,13 @@ export default function DocumentsPage() {
                 {documents.map((doc, i) => (
                   <div key={doc.id}>
                     {i > 0 && <div className="mx-3 border-t" />}
-                    <DocumentRow doc={doc} onDelete={handleDelete} onProcess={handleProcess} />
+                    <DocumentRow
+                      doc={doc}
+                      onDelete={handleDelete}
+                      onProcess={handleProcess}
+                      pipelineProgress={pipelineProgress[doc.id]}
+                      developerMode={developerMode}
+                    />
                   </div>
                 ))}
               </CardContent>

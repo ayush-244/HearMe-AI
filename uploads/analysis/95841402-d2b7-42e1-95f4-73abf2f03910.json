@@ -1,0 +1,88 @@
+{
+  "document_id": "95841402-d2b7-42e1-95f4-73abf2f03910",
+  "title": "Ayush Kumar",
+  "document_type": "resume",
+  "classification_confidence": 30.0,
+  "language": "English",
+  "language_code": "en",
+  "page_count": 1,
+  "word_count": 482,
+  "character_count": 3562,
+  "estimated_reading_time_minutes": 2,
+  "sections": [
+    {
+      "name": "Summary",
+      "start_offset": 96,
+      "end_offset": 449,
+      "estimated_page": 1
+    },
+    {
+      "name": "Work Experience",
+      "start_offset": 449,
+      "end_offset": 1197,
+      "estimated_page": 1
+    },
+    {
+      "name": "Projects",
+      "start_offset": 1197,
+      "end_offset": 2327,
+      "estimated_page": 1
+    },
+    {
+      "name": "Education",
+      "start_offset": 2327,
+      "end_offset": 2529,
+      "estimated_page": 1
+    },
+    {
+      "name": "Skills",
+      "start_offset": 2529,
+      "end_offset": 2621,
+      "estimated_page": 1
+    },
+    {
+      "name": "Languages",
+      "start_offset": 2621,
+      "end_offset": 3296,
+      "estimated_page": 1
+    },
+    {
+      "name": "Certifications",
+      "start_offset": 3296,
+      "end_offset": 3562,
+      "estimated_page": 1
+    }
+  ],
+  "contains_tables": false,
+  "contains_images": false,
+  "contains_code_blocks": false,
+  "contains_urls": false,
+  "contains_emails": true,
+  "contains_phone_numbers": true,
+  "contains_dates": false,
+  "keywords": [
+    "ayush kumar",
+    "tech cse",
+    "data structures",
+    "structures algorithms",
+    "algorithms object",
+    "object oriented",
+    "oriented programming",
+    "data structures algorithms",
+    "structures algorithms object",
+    "algorithms object oriented",
+    "object oriented programming",
+    "full stack",
+    "srm university",
+    "gradient boosting",
+    "interactive streamlit"
+  ],
+  "summary_preview": "Ayush Kumar | § ayush-244 | ï Ayush Kumar | H +919162573098 # ayushku244@gmail.com B.Tech CSE student with strong foundations in Data Structures, Algorithms, and Object-Oriented Programming, experi- enced in building scalable full-stack applications and backend systems. Passionate about solving real-world problems using technology and interested in applying software engineering in financial services and large-scale systems. Summer Research Intern – SRM University-AP • Built end-to-end ML system",
+  "extracted_metadata": {
+    "title": "Ayush Kumar",
+    "author": "",
+    "creation_date": null,
+    "modification_date": null
+  },
+  "created_at": "2026-06-28T10:38:35.112741+00:00"
+}
