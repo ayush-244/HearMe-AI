@@ -182,6 +182,29 @@ export interface MessageResponse {
   timestamp: string
 }
 
+export interface StreamEvent {
+  type: "stage" | "token" | "done" | "error" | "citation"
+  stage?: string
+  label?: string
+  token?: string
+  result?: {
+    answer: string
+    chunk_count?: number
+    context_token_estimate?: number
+    knowledge_gap?: boolean
+    guardrail_triggered?: boolean
+    citations?: string[]
+    sources?: Source[]
+    processing_time_ms?: number
+    retrieval_time_ms?: number
+    generation_time_ms?: number
+    error?: string
+  }
+  citations?: string[]
+  sources?: Source[]
+  message?: string
+}
+
 export interface Settings {
   theme: "dark" | "light" | "system"
   model: string

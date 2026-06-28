@@ -6,10 +6,13 @@ import { useSearchParams, useRouter } from "next/navigation"
 import { api } from "@/services/api-client"
 import { useConversation, useCreateConversation, useAddMessage, useAddAttachment } from "@/hooks/use-conversations"
 import { useUiStore } from "@/store/ui-store"
+import { useChatStream } from "@/hooks/use-chat-stream"
+import { useAutoScroll } from "@/hooks/use-auto-scroll"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
+import { ReasoningStages } from "@/components/chat/ReasoningStages"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import rehypeHighlight from "rehype-highlight"
@@ -19,6 +22,7 @@ import {
   Copy,
   Check,
   RefreshCw,
+  ChevronDown,
   User,
   StopCircle,
   Paperclip,
@@ -31,6 +35,14 @@ import {
 import type { ChatMessage } from "@/types"
 import { motion, AnimatePresence } from "framer-motion"
 import { toast } from "@/components/ui/toast"
+
+interface StreamMessage {
+  id: string
+  role: "assistant" | "user"
+  content: string
+  citations?: string[]
+  isStreaming?: boolean
+}
 
 const ThinkingDots = memo(function ThinkingDots() {
   return (
@@ -52,7 +64,7 @@ const MessageBubble = memo(function MessageBubble({
   onCopy,
   onRegenerate,
 }: {
-  msg: ChatMessage
+  msg: StreamMessage
   onCopy: (content: string) => void
   onRegenerate: () => void
 }) {
@@ -86,11 +98,22 @@ const MessageBubble = memo(function MessageBubble({
           </div>
         ) : (
           <div className="rounded-2xl bg-muted/50 border px-4 py-3 shadow-sm">
-            <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-muted prose-code:text-primary">
-              <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
-                {msg.content}
-              </ReactMarkdown>
-            </div>
+            {msg.isStreaming ? (
+              <div>
+                <span className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</span>
+                <motion.span
+                  animate={{ opacity: [1, 0] }}
+                  transition={{ duration: 0.6, repeat: Infinity, repeatType: "reverse" }}
+                  className="inline-block w-[2px] h-4 bg-primary ml-0.5 align-text-bottom"
+                />
+              </div>
+            ) : (
+              <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-muted prose-code:text-primary">
+                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
+                  {msg.content}
+                </ReactMarkdown>
+              </div>
+            )}
 
             {msg.citations && msg.citations.length > 0 && (
               <div className="mt-3 pt-3 border-t">
@@ -105,14 +128,16 @@ const MessageBubble = memo(function MessageBubble({
               </div>
             )}
 
-            <div className="flex items-center gap-1 mt-3 pt-2 border-t border-border/50">
-              <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-muted" onClick={handleCopy} title="Copy response">
-                {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
-              </Button>
-              <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-muted" onClick={onRegenerate} title="Regenerate">
-                <RefreshCw className="h-3.5 w-3.5" />
-              </Button>
-            </div>
+            {!msg.isStreaming && msg.content && (
+              <div className="flex items-center gap-1 mt-3 pt-2 border-t border-border/50">
+                <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-muted" onClick={handleCopy} title="Copy response">
+                  {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                </Button>
+                <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-muted" onClick={onRegenerate} title="Regenerate">
+                  <RefreshCw className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -147,18 +172,22 @@ function ChatPageInner() {
   const addAttach = useAddAttachment()
 
   const [input, setInput] = useState("")
-  const [isStreaming, setIsStreaming] = useState(false)
+  const [isPending, setIsPending] = useState(false)
+  const [streamMessages, setStreamMessages] = useState<StreamMessage[]>([])
   const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null)
-  const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const currentConvIdRef = useRef<string | null>(null)
 
-  const messages = useMemo(() => conversation?.messages ?? [], [conversation?.messages])
+  const dbMessages = useMemo(() => conversation?.messages ?? [], [conversation?.messages])
   const attachedFiles = useMemo(() => conversation?.attached_documents ?? [], [conversation?.attached_documents])
+
+  const { containerRef, showJumpButton, scrollToBottom } = useAutoScroll([streamMessages, isPending])
 
   useEffect(() => {
     if (convId) {
       setActiveConversation(convId)
+      currentConvIdRef.current = convId
     }
   }, [convId, setActiveConversation])
 
@@ -169,18 +198,26 @@ function ChatPageInner() {
   }, [convId, activeConversationId, router])
 
   useEffect(() => {
-    if (scrollRef.current) {
-      const el = scrollRef.current
-      requestAnimationFrame(() => {
-        el.scrollTo({ top: el.scrollHeight, behavior: "smooth" })
-      })
+    if (streamMessages.length === 0 && dbMessages.length > 0) {
+      setStreamMessages(
+        dbMessages.map((m: ChatMessage) => ({
+          id: m.id,
+          role: m.role,
+          content: m.content,
+          citations: m.citations,
+          isStreaming: false,
+        }))
+      )
     }
-  }, [messages, isStreaming])
+  }, [dbMessages, streamMessages.length])
+
+  const { stream: streamQuery, cancel, isStreaming, currentStage, currentLabel } = useChatStream()
 
   async function ensureConversation(): Promise<string> {
     if (convId) return convId
     const conv = await createConv.mutateAsync("")
     setActiveConversation(conv.id)
+    currentConvIdRef.current = conv.id
     router.push(`/chat?id=${conv.id}`, { scroll: false })
     return conv.id
   }
@@ -195,7 +232,7 @@ function ChatPageInner() {
       })
     },
     onSuccess: async (result, variables) => {
-      setIsStreaming(true)
+      setIsPending(true)
       try {
         const cid = await ensureConversation()
         await addMsg.mutateAsync({ convId: cid, role: "user", content: variables })
@@ -211,21 +248,70 @@ function ChatPageInner() {
       } catch {
         toast({ title: "Failed to save message", variant: "destructive" })
       }
-      setIsStreaming(false)
+      setIsPending(false)
     },
     onError: () => {
-      setIsStreaming(false)
+      setIsPending(false)
       toast({ title: "Failed to get answer", variant: "destructive" })
     },
   })
 
-  function handleSend() {
+  const handleSend = useCallback(async () => {
     const text = input.trim()
-    if (!text || isStreaming) return
+    if (!text || isStreaming || isPending) return
     setInput("")
-    setIsStreaming(true)
-    knowledgeMutation.mutate(text)
-  }
+
+    const cid = await ensureConversation()
+
+    const msgId = `stream-${Date.now()}`
+    setStreamMessages((prev) => [
+      ...prev,
+      { id: `user-${Date.now()}`, role: "user", content: text },
+      { id: msgId, role: "assistant", content: "", isStreaming: true },
+    ])
+
+    try {
+      await addMsg.mutateAsync({ convId: cid, role: "user", content: text })
+    } catch {}
+
+    streamQuery(
+      { question: text, top_k: 5, document_ids: attachedFiles.length > 0 ? attachedFiles.map((f) => f.document_id) : undefined },
+      {
+        onToken: (token) => {
+          setStreamMessages((prev) =>
+            prev.map((m) => (m.id === msgId ? { ...m, content: m.content + token } : m))
+          )
+        },
+        onCitation: (citations) => {
+          setStreamMessages((prev) =>
+            prev.map((m) => (m.id === msgId ? { ...m, citations } : m))
+          )
+        },
+        onDone: async (result) => {
+          setStreamMessages((prev) =>
+            prev.map((m) => (m.id === msgId ? { ...m, isStreaming: false, content: result?.answer || m.content, citations: result?.citations || m.citations } : m))
+          )
+          try {
+            await addMsg.mutateAsync({
+              convId: cid,
+              role: "assistant",
+              content: result?.answer || "",
+              citations: result?.citations,
+            })
+            api.extractMemory({ user_text: text, assistant_text: result?.answer || "" })
+              .then(() => queryClient.invalidateQueries({ queryKey: ["memories"] }))
+              .catch(() => {})
+          } catch {}
+        },
+        onError: (message) => {
+          setStreamMessages((prev) =>
+            prev.map((m) => (m.id === msgId ? { ...m, isStreaming: false, content: m.content || "I encountered an error generating a response. Please try again." } : m))
+          )
+          toast({ title: message || "Stream error", variant: "destructive" })
+        },
+      }
+    )
+  }, [input, isStreaming, isPending, streamQuery, ensureConversation, addMsg, queryClient, attachedFiles])
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -239,10 +325,9 @@ function ChatPageInner() {
   }, [])
 
   function regenerate() {
-    const lastUser = [...messages].reverse().find((m) => m.role === "user")
+    const lastUser = [...streamMessages].reverse().find((m) => m.role === "user")
     if (lastUser) {
-      setIsStreaming(true)
-      knowledgeMutation.mutate(lastUser.content)
+      setInput(lastUser.content)
     }
   }
 
@@ -315,11 +400,11 @@ function ChatPageInner() {
     }
   }
 
-  const showWelcome = !convId && !convLoading && messages.length === 0
+  const showWelcome = !convId && !convLoading && streamMessages.length === 0
 
   return (
     <div className="flex h-[calc(100vh-3.5rem)] flex-col">
-      <ScrollArea ref={scrollRef} className="flex-1 px-4 lg:px-8">
+      <div ref={containerRef} className="flex-1 overflow-y-auto px-4 lg:px-8">
         <div className="mx-auto max-w-3xl py-6 space-y-6">
           {showWelcome && (
             <motion.div
@@ -391,7 +476,7 @@ function ChatPageInner() {
           )}
 
           <AnimatePresence mode="popLayout">
-            {messages.map((msg) => (
+            {streamMessages.map((msg) => (
               <MessageBubble
                 key={msg.id}
                 msg={msg}
@@ -401,26 +486,29 @@ function ChatPageInner() {
             ))}
           </AnimatePresence>
 
-          {isStreaming && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex gap-3"
-            >
-              <Avatar className="h-8 w-8 ring-2 ring-primary/20 shrink-0">
-                <AvatarFallback className="bg-gradient-to-br from-primary to-primary/60 text-primary-foreground">
-                  <Sparkles className="h-4 w-4" />
-                </AvatarFallback>
-              </Avatar>
-              <div className="rounded-2xl bg-muted/50 border px-4 py-3 shadow-sm">
-                <ThinkingDots />
-              </div>
-            </motion.div>
-          )}
+          <ReasoningStages currentStage={currentStage} currentLabel={currentLabel} />
         </div>
-      </ScrollArea>
+      </div>
 
-      <div className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4 lg:px-8">
+      {showJumpButton && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="absolute bottom-24 left-1/2 -translate-x-1/2 z-10"
+        >
+          <Button
+            variant="secondary"
+            size="sm"
+            className="rounded-full shadow-lg h-8 gap-1.5"
+            onClick={() => scrollToBottom()}
+          >
+            <ChevronDown className="h-4 w-4" />
+            Jump to latest
+          </Button>
+        </motion.div>
+      )}
+
+      <div className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4 lg:px-8 relative">
         <div className="mx-auto max-w-3xl space-y-3">
           {uploadProgress && (
             <motion.div
@@ -485,7 +573,7 @@ function ChatPageInner() {
                 placeholder="Ask anything about your documents..."
                 rows={1}
                 className="flex w-full rounded-xl border bg-muted/50 px-4 py-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none min-h-[48px] max-h-[200px]"
-                disabled={isStreaming}
+                disabled={isStreaming || isPending}
                 style={{ height: "auto" }}
                 onInput={(e) => {
                   const el = e.currentTarget
@@ -507,13 +595,13 @@ function ChatPageInner() {
                 size="icon"
                 className="h-12 w-12 shrink-0 rounded-xl"
                 onClick={() => fileInputRef.current?.click()}
-                disabled={isStreaming || uploadProgress?.status === "uploading" || uploadProgress?.status === "processing"}
+                disabled={isStreaming || isPending || uploadProgress?.status === "uploading" || uploadProgress?.status === "processing"}
                 title="Attach document"
               >
                 <Paperclip className="h-5 w-5" />
               </Button>
               <Button
-                onClick={isStreaming ? () => setIsStreaming(false) : handleSend}
+                onClick={isStreaming ? cancel : handleSend}
                 disabled={!input.trim() && !isStreaming}
                 size="icon"
                 className="h-12 w-12 shrink-0 rounded-xl"

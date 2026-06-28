@@ -13,6 +13,7 @@ import type {
   MemorySearchResponse,
   MessageResponse,
   SearchQuery,
+  StreamEvent,
   SearchResponse,
 } from "@/types"
 
@@ -136,6 +137,16 @@ export const api = {
   // Knowledge
   knowledgeQuery: (query: KnowledgeQuery) =>
     request<KnowledgeResponse>("/knowledge/chat", { method: "POST", body: JSON.stringify(query) }),
+
+  knowledgeQueryStream: (query: KnowledgeQuery, signal?: AbortSignal) => {
+    const url = `${API_BASE}/knowledge/chat/stream`
+    return fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(query),
+      signal,
+    })
+  },
 
   knowledgeHealth: () => request<HealthResponse>("/knowledge/health"),
 

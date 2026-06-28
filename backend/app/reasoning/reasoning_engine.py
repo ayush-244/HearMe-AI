@@ -14,6 +14,7 @@ from .guardrails import Guardrails
 from .answer_models import KnowledgeQuery, KnowledgeAnswer, ConversationTurn
 from .router.intent_router import IntentRouter, SIMILARITY_THRESHOLD
 from .router.intent_models import IntentResult, IntentType
+from .conversation.conversation_context import ConversationContextManager
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +48,8 @@ class ReasoningEngine:
         self._intent_router = IntentRouter()
         self._last_retrieved_chunks: Dict[str, List[Dict[str, Any]]] = {}
         self._last_retrieved_context: Dict[str, str] = {}
-        logger.info("ReasoningEngine initialized with IntentRouter")
+        self._context_manager = ConversationContextManager()
+        logger.info("ReasoningEngine initialized with IntentRouter and ConversationContextManager")
 
     def answer(self, query: KnowledgeQuery) -> KnowledgeAnswer:
         total_start = time.time()
@@ -63,14 +65,30 @@ class ReasoningEngine:
         turn_count = self._get_turn_count(query.conversation_id)
         last_assistant = self._get_last_assistant_response(query.conversation_id)
 
+        ctx = self._context_manager.get_or_create(query.conversation_id) if query.conversation_id else None
+        routed_query = query.question
+        if ctx and ctx.last_question:
+            resolved = self._context_manager.resolve_query(
+                query.conversation_id, query.question,
+            )
+            if resolved.had_reference:
+                routed_query = resolved.resolved
+
         intent_result, _ = self._intent_router.route(
-            query=query.question,
+            query=routed_query,
             conversation_id=query.conversation_id,
             history=conversation_history,
             last_assistant_response=last_assistant,
             last_retrieved_chunks=self._last_retrieved_chunks.get(query.conversation_id, []),
             turn_count=turn_count,
         )
+
+        if ctx and ctx.conversation_summary:
+            summary = f"[Conversation Summary: {ctx.conversation_summary}]"
+            if conversation_history:
+                conversation_history = list(conversation_history) + [{"role": "system", "content": summary}]
+            else:
+                conversation_history = [{"role": "system", "content": summary}]
 
         if not self._guardrails.check_query(query.question):
             total_time = (time.time() - total_start) * 1000
@@ -242,6 +260,15 @@ class ReasoningEngine:
             query.conversation_id, query.question, answer_text,
         )
 
+        if query.conversation_id:
+            self._context_manager.update_after_turn(
+                conversation_id=query.conversation_id,
+                question=query.question,
+                answer=answer_text,
+                intent=intent_result.intent.value if intent_result else None,
+                chunks=context["chunks"] if context else None,
+            )
+
         logger.info(
             "Reasoning complete: intent=%s, conf=%.2f, question='%s', "
             "chunks=%d, tokens=%d, retrieval=%.2fms, generation=%.2fms, "
@@ -308,10 +335,12 @@ class ReasoningEngine:
 
     def clear_conversation_history(self, conversation_id: str) -> None:
         self._conversation_histories.pop(conversation_id, None)
+        self._context_manager.clear(conversation_id)
         logger.info("Cleared conversation history for %s", conversation_id)
 
     def health(self) -> Dict[str, Any]:
         search_health = self._search_engine.health()
+        ctx_health = self._context_manager.health()
         return {
             "ready": search_health.get("ready", False),
             "search_engine_ready": search_health.get("ready", False),
@@ -321,4 +350,6 @@ class ReasoningEngine:
             "allow_external_knowledge": self._settings.reasoning_allow_external_knowledge,
             "conversation_history_limit": self._settings.reasoning_conversation_history_limit,
             "active_conversations": len(self._conversation_histories),
+            "active_contexts": ctx_health.get("active_contexts", 0),
+            "active_windows": ctx_health.get("active_windows", 0),
         }
