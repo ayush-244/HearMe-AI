@@ -14,6 +14,10 @@ class CitationManager:
         self._used_chunks = list(chunks)
         logger.debug("Tracking %d chunks for citations", len(chunks))
 
+    def reset(self) -> None:
+        self._used_chunks.clear()
+        logger.debug("CitationManager reset")
+
     def build_citations(self) -> List[str]:
         citations: List[str] = []
         seen: set = set()

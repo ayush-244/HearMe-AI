@@ -2,7 +2,16 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from .router.intent_models import IntentResult, IntentType
+
 logger = logging.getLogger(__name__)
+
+GREETING_RESPONSES = [
+    "Hello! How can I help you today?",
+    "Hi there! What can I assist you with?",
+    "Hey! How can I help?",
+    "Hello! Feel free to ask me anything.",
+]
 
 
 class PromptBuilder:
@@ -31,69 +40,94 @@ class PromptBuilder:
             logger.error("Failed to load prompt template %s: %s", filename, e)
             return ""
 
+    def build_greeting(self) -> str:
+        import random
+        return random.choice(GREETING_RESPONSES)
+
     def build(
         self,
-        context: Dict[str, Any],
+        context: Optional[Dict[str, Any]] = None,
         question: str = "",
         conversation_history: Optional[List[Dict[str, str]]] = None,
         language: str = "en",
         allow_external_knowledge: bool = False,
         memory_context: Optional[List[Dict[str, Any]]] = None,
+        intent: Optional[IntentResult] = None,
     ) -> str:
-        chunks = context.get("chunks", [])
-        total_tokens = context.get("total_tokens", 0)
+        intent = intent or IntentResult(intent=IntentType.GENERAL_AI)
 
-        context_block = self._format_context(chunks)
+        knowledge_context = context.get("chunks", []) if context else []
+        total_tokens = context.get("total_tokens", 0) if context else 0
+        has_knowledge = bool(knowledge_context)
+
+        if has_knowledge:
+            knowledge_block = self._format_context(knowledge_context)
+        else:
+            knowledge_block = None
 
         if memory_context:
             memory_block = self._format_memory_context(memory_context)
-            context_block = context_block + "\n\n" + memory_block
+        else:
+            memory_block = None
 
         history_block = self._format_history(conversation_history)
 
-        guardrails_block = self._format_guardrails(allow_external_knowledge)
+        sections = []
 
-        system_prompt = self._system_template.format(
-            guardrails=guardrails_block,
-        )
+        intent_instruction = self._build_intent_instruction(intent)
+        sections.append("--- Intent Instruction ---\n" + intent_instruction)
 
-        user_prompt = self._user_template.format(
-            context=context_block,
-            conversation_history=history_block,
-            question=question.strip(),
-            language=language,
-            token_estimate=total_tokens,
-            chunk_count=len(chunks),
-        )
+        if memory_block:
+            sections.append("--- Personal Context ---\nThe following information is known about you:\n" + memory_block)
 
-        if self._system_template and self._user_template:
-            full_prompt = f"{system_prompt}\n\n{user_prompt}"
-        else:
-            full_prompt = self._build_fallback_prompt(
-                context_block, question, history_block, guardrails_block, language,
-            )
+        if has_knowledge and knowledge_block:
+            sections.append("--- Retrieved Knowledge ---\n" + knowledge_block)
+        elif intent.requires_documents and not has_knowledge:
+            sections.append("--- Note ---\nNo relevant document content was found for this query.")
+
+        guardrails_block = self._format_guardrails(allow_external_knowledge, intent, has_knowledge)
+        sections.append(guardrails_block)
+
+        if history_block:
+            sections.append("--- Conversation History ---\n" + history_block)
+
+        sections.append("--- User Question ---\n" + question.strip())
+
+        full_prompt = "\n\n".join(sections)
 
         logger.info(
-            "Prompt built: system=%d chars, user=%d chars, total=%d chars, chunks=%d, tokens=%d",
-            len(system_prompt), len(user_prompt), len(full_prompt), len(chunks), total_tokens,
+            "Prompt built: intent=%s, has_knowledge=%s, has_memory=%s, total=%d chars",
+            intent.intent.value if intent else "unknown",
+            has_knowledge, bool(memory_context), len(full_prompt),
         )
+
         return full_prompt
+
+    def _build_intent_instruction(self, intent: IntentResult) -> str:
+        if intent.intent == IntentType.GREETING:
+            return "You are a friendly AI assistant. Greet the user warmly. Keep it brief."
+        if intent.intent == IntentType.SMALL_TALK:
+            return "You are a friendly AI assistant. Respond naturally in casual conversation. Be warm and engaging."
+        if intent.intent == IntentType.PERSONAL_MEMORY:
+            return "You are a helpful AI assistant. Answer based on what you know about the user. If you don't have enough personal context, say so honestly. Do NOT use document knowledge unless explicitly needed."
+        if intent.intent == IntentType.DOCUMENT_QUESTION:
+            return "You are a Knowledge Reasoning Assistant. Answer based on the retrieved document chunks provided below. Include inline citations like [Source N] when using specific document content. If no relevant content was retrieved, state that clearly."
+        if intent.intent == IntentType.GENERAL_AI:
+            return "You are a knowledgeable AI assistant. Answer the question using your general knowledge. Do NOT fabricate document citations. Be clear, accurate, and educational."
+        if intent.intent == IntentType.MIXED:
+            return "You are a helpful AI assistant with access to personal context and document knowledge. Integrate both sources naturally. Include citations only for document-derived statements. Use personal memory for user-specific context."
+        if intent.intent == IntentType.FOLLOW_UP:
+            return "You are a helpful AI assistant continuing a previous conversation. Use the conversation history to provide context-aware responses. If previous document context is available, reuse it without performing new searches."
+        return "You are a helpful AI assistant. Answer the user's question accurately and concisely."
 
     def _format_memory_context(self, memories: List[Dict[str, Any]]) -> str:
         if not memories:
             return ""
-        lines = [
-            "--- Personal Memories ---",
-            "The following information is known about you from past conversations:",
-            "",
-        ]
+        lines = []
         for i, mem in enumerate(memories, 1):
             content = mem.get("content", "") or ""
             mem_type = mem.get("type", "fact")
-            importance = mem.get("importance", 0)
-            lines.append(f"[Memory {i}] ({mem_type}, importance={importance:.2f}) {content}")
-        lines.append("")
-        lines.append("Use these personal memories to personalize your answer if relevant.")
+            lines.append(f"[Memory {i}] ({mem_type}) {content}")
         return "\n".join(lines)
 
     def _format_context(self, chunks: List[Dict[str, Any]]) -> str:
@@ -111,10 +145,10 @@ class PromptBuilder:
 
             header = f"[Source {idx}] {title}"
             if section and section.lower() != title.lower():
-                header += f" › {section}"
+                header += f" \u203a {section}"
             if page:
-                header += f" › Page {page}"
-            header += f" (ID: {chunk_id}…)"
+                header += f" \u203a Page {page}"
+            header += f" (ID: {chunk_id}\u2026)"
 
             truncated = chunk.get("truncated", False)
             if truncated:
@@ -128,7 +162,7 @@ class PromptBuilder:
 
     def _format_history(self, history: Optional[List[Dict[str, str]]]) -> str:
         if not history:
-            return "No previous conversation."
+            return ""
         lines = []
         for turn in history:
             role = turn.get("role", "unknown").capitalize()
@@ -136,7 +170,25 @@ class PromptBuilder:
             lines.append(f"{role}: {content}")
         return "\n".join(lines)
 
-    def _format_guardrails(self, allow_external_knowledge: bool) -> str:
+    def _format_guardrails(self, allow_external_knowledge: bool, intent: IntentResult, has_knowledge: bool) -> str:
+        if intent.intent in (IntentType.GREETING, IntentType.SMALL_TALK):
+            return ""
+        if intent.intent == IntentType.GENERAL_AI:
+            return "- Use your general knowledge to answer.\n- Do NOT fabricate citations or document references."
+        if intent.intent == IntentType.PERSONAL_MEMORY:
+            return "- Answer based on personal context only.\n- Do NOT use document knowledge.\n- If you don't know, say so honestly."
+        if intent.intent in (IntentType.DOCUMENT_QUESTION, IntentType.MIXED) and has_knowledge:
+            if allow_external_knowledge:
+                return (
+                    "- You MAY use general knowledge to supplement document content.\n"
+                    "- Clearly indicate when information comes from outside knowledge.\n"
+                    "- Include inline citations like [Source N] for document-derived statements."
+                )
+            return (
+                "- Answer using the retrieved knowledge provided.\n"
+                "- Include inline citations like [Source N] for document-derived statements.\n"
+                "- If the retrieved knowledge is insufficient, say so clearly."
+            )
         if self._guardrails_template:
             return self._guardrails_template.format(
                 external_knowledge="enabled" if allow_external_knowledge else "disabled",
@@ -163,29 +215,29 @@ class PromptBuilder:
     ) -> str:
         return f"""You are a Knowledge Reasoning Assistant. Your role is to answer questions based ONLY on the retrieved document chunks provided below.
 
-{guardrails_block}
+    {guardrails_block}
 
---- Retrieved Knowledge ---
+    --- Retrieved Knowledge ---
 
-{context_block}
+    {context_block}
 
---- Conversation History ---
+    --- Conversation History ---
 
-{history_block}
+    {history_block}
 
---- User Question ---
+    --- User Question ---
 
-{question}
+    {question}
 
---- Instructions ---
+    --- Instructions ---
 
-1. Answer the question using ONLY the retrieved knowledge above.
-2. If the knowledge is insufficient, say: "I couldn't find enough information in the uploaded documents."
-3. Include inline citations like [Source 1], [Source 2], etc.
-4. Respond in {language}.
-5. Be concise, accurate, and well-structured.
-6. Do NOT hallucinate or use outside knowledge.
-"""
+    1. Answer the question using ONLY the retrieved knowledge above.
+    2. If the knowledge is insufficient, say: "I couldn't find enough information in the uploaded documents."
+    3. Include inline citations like [Source 1], [Source 2], etc.
+    4. Respond in {language}.
+    5. Be concise, accurate, and well-structured.
+    6. Do NOT hallucinate or use outside knowledge.
+    """
 
     def reload_templates(self) -> None:
         self._system_template = self._load("knowledge_system.txt")

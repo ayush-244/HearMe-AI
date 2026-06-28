@@ -52,9 +52,10 @@ class KnowledgeAnswer:
     guardrail_triggered: bool = False
     knowledge_gap: bool = False
     conversation_id: str = ""
+    intent: Optional[Dict[str, Any]] = None
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
+        result = {
             "question": self.question,
             "answer": self.answer,
             "citations": self.citations,
@@ -69,3 +70,6 @@ class KnowledgeAnswer:
             "knowledge_gap": self.knowledge_gap,
             "conversation_id": self.conversation_id,
         }
+        if self.intent:
+            result["intent"] = self.intent
+        return result
