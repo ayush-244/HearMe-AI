@@ -1,0 +1,68 @@
+[
+  {
+    "id": "7a6f15ad-a110-4879-a3f9-59c26e44ed01",
+    "conversation_id": "1a79c663-5c7a-4aa4-8096-d79ad15ff09c",
+    "role": "user",
+    "content": "Summarize my documents",
+    "citations": [],
+    "timestamp": "2026-06-28T17:27:56.438169"
+  },
+  {
+    "id": "38a9c210-df3d-491c-a0fc-4972593faac2",
+    "conversation_id": "1a79c663-5c7a-4aa4-8096-d79ad15ff09c",
+    "role": "assistant",
+    "content": "The individual is a B.Tech CSE student with strong foundations in Data Structures, Algorithms, and Object-Oriented Programming, experienced in building scalable full-stack applications and backend systems [Source 1]. They have work experience as a Summer Research Intern at SRM University-AP, where they built an end-to-end ML system using Gradient Boosting to predict credit scores [Source 2]. They are also a Core Team Member at Google Developer Groups (GDG), where they tracked registration data and increased participant engagement [Source 2].\n\nThe individual has worked on various projects, including Crop Disease Classification, AI-Based Peer Behavior Similarity Detector, and Collaborative Class \u2013 Academic Collaboration Platform [Source 3]. They are proficient in multiple programming languages, including Python, JavaScript, C, C++, and Java, and have experience with web technologies, backend & APIs, databases, machine learning, and data science & analytics [Source 4]. They also hold certifications such as Oracle Cloud Infrastructure 2025 Certified Data Science Professional, Oracle Certified Professional: Java SE 17 Developer, and MongoDB Certified Associate Developer (Node.js) [Source 5].\n\nSources:\n[Source 1]\n[Source 2]\n[Source 3]\n[Source 4]\n[Source 5]",
+    "citations": [
+      "[resume \u203a Summary \u203a Page 1]",
+      "[resume \u203a Work Experience \u203a Page 1]",
+      "[resume \u203a Projects \u203a Page 1]",
+      "[resume \u203a Languages \u203a Page 1]",
+      "[resume \u203a Certifications \u203a Page 1]"
+    ],
+    "timestamp": "2026-06-28T17:27:56.469297"
+  },
+  {
+    "id": "81e881a7-4af3-4d2f-ba13-f50653a9e4c1",
+    "conversation_id": "1a79c663-5c7a-4aa4-8096-d79ad15ff09c",
+    "role": "user",
+    "content": "tell my name",
+    "citations": [],
+    "timestamp": "2026-06-28T17:28:32.570422"
+  },
+  {
+    "id": "e55a7aed-b80d-4031-8c7c-701fdaf14fb0",
+    "conversation_id": "1a79c663-5c7a-4aa4-8096-d79ad15ff09c",
+    "role": "assistant",
+    "content": "Answer:\nI couldn't find enough information in the uploaded documents.\n\nSources:\n[Source 1], [Source 2], [Source 3], [Source 4], [Source 5]",
+    "citations": [
+      "[resume \u203a Work Experience \u203a Page 1]",
+      "[resume \u203a Projects \u203a Page 1]",
+      "[resume \u203a Education \u203a Page 1]",
+      "[resume \u203a Languages \u203a Page 1]",
+      "[resume \u203a Certifications \u203a Page 1]"
+    ],
+    "timestamp": "2026-06-28T17:28:32.609198"
+  },
+  {
+    "id": "25f82541-7289-4306-8e42-6355f8277acd",
+    "conversation_id": "1a79c663-5c7a-4aa4-8096-d79ad15ff09c",
+    "role": "user",
+    "content": "name is there",
+    "citations": [],
+    "timestamp": "2026-06-28T17:29:53.796028"
+  },
+  {
+    "id": "1545851d-1b95-42e5-affe-d6aff3b38d53",
+    "conversation_id": "1a79c663-5c7a-4aa4-8096-d79ad15ff09c",
+    "role": "assistant",
+    "content": "Answer:\nThe name is not explicitly mentioned in the provided documents. However, based on the context, it appears that the documents are a part of a resume, and the name is likely to be the owner of the resume, but it is not specified [Source 1].\n\nSources:\n[Source 1] resume \u203a Work Experience \u203a Page 1 (ID: 5cd78d11\u2026)",
+    "citations": [
+      "[resume \u203a Work Experience \u203a Page 1]",
+      "[resume \u203a Projects \u203a Page 1]",
+      "[resume \u203a Education \u203a Page 1]",
+      "[resume \u203a Languages \u203a Page 1]",
+      "[resume \u203a Certifications \u203a Page 1]"
+    ],
+    "timestamp": "2026-06-28T17:29:53.828526"
+  }
+]

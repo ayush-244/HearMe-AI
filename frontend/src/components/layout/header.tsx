@@ -6,11 +6,19 @@ import { Button } from "@/components/ui/button"
 import { useUiStore } from "@/store/ui-store"
 import { useEffect, useState } from "react"
 
+function useMounted() {
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true)
+  }, [])
+  return mounted
+}
+
 export function Header() {
   const { theme, setTheme } = useTheme()
   const { toggleSidebar } = useUiStore()
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => setMounted(true), [])
+  const mounted = useMounted()
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 lg:px-6">

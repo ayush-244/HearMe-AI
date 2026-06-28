@@ -21,6 +21,8 @@ export interface KnowledgeQuery {
   top_k?: number
   min_score?: number
   language?: string
+  document_type?: string
+  document_ids?: string[]
 }
 
 export interface KnowledgeResponse {
@@ -136,6 +138,48 @@ export interface MemorySearchResponse {
 export interface HealthResponse {
   ready: boolean
   [key: string]: unknown
+}
+
+export interface Conversation {
+  id: string
+  title: string
+  created_at: string
+  updated_at: string
+  last_message: string | null
+  message_count: number
+  pinned: boolean
+}
+
+export interface ConversationDetail {
+  id: string
+  title: string
+  created_at: string
+  updated_at: string
+  messages: ChatMessage[]
+  attached_documents: AttachedDocument[]
+  pinned: boolean
+}
+
+export interface AttachedDocument {
+  document_id: string
+  filename: string
+  file_type: string
+  status: string
+  attached_at: string
+}
+
+export interface ConversationListResponse {
+  conversations: Conversation[]
+  total: number
+}
+
+export interface MessageResponse {
+  id: string
+  conversation_id: string
+  role: string
+  content: string
+  citations: string[]
+  timestamp: string
 }
 
 export interface Settings {

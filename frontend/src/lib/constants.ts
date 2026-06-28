@@ -3,9 +3,9 @@ export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:800
 export const NAV_ITEMS = [
   { label: "Home", href: "/", icon: "LayoutDashboard" },
   { label: "Chat", href: "/chat", icon: "MessageSquare" },
-  { label: "Documents", href: "/documents", icon: "FileText" },
-  { label: "Memory", href: "/memory", icon: "Database" },
+  { label: "Library", href: "/library", icon: "FileText" },
   { label: "Knowledge", href: "/knowledge", icon: "Brain" },
+  { label: "Memory", href: "/memory", icon: "Database" },
   { label: "Settings", href: "/settings", icon: "Settings" },
 ] as const
 

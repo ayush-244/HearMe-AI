@@ -43,7 +43,7 @@ export function DeveloperSidebar() {
           animate={{ width: 240, opacity: 1 }}
           exit={{ width: 0, opacity: 0 }}
           transition={{ duration: 0.2, ease: "easeInOut" }}
-          className="fixed left-[240px] top-0 z-30 h-screen border-r bg-background/95 backdrop-blur flex flex-col overflow-hidden"
+          className="fixed left-[300px] top-0 z-30 h-screen border-r bg-background/95 backdrop-blur flex flex-col overflow-hidden"
         >
           <div className="flex items-center justify-between h-14 px-4">
             <div className="flex items-center gap-2 font-semibold text-sm">

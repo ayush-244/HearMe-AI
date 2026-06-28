@@ -6,22 +6,17 @@ import { api } from "@/services/api-client"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Brain, Sparkles, FileText, BookOpen, Lightbulb, Send, ArrowRight } from "lucide-react"
+import { Brain, FileText, BookOpen, Send, ArrowRight, Search, Loader2, Layers } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import rehypeHighlight from "rehype-highlight"
 import { motion } from "framer-motion"
+import { useDocuments } from "@/hooks/use-documents"
 import type { Source } from "@/types"
-
-const suggestionQuestions = [
-  "What are my documents about?",
-  "Summarize the key topics",
-  "What insights can you find?",
-  "Tell me something interesting",
-]
 
 export default function KnowledgePage() {
   const [question, setQuestion] = useState("")
+  const { data: docsData } = useDocuments()
 
   const mutation = useMutation({
     mutationFn: (q: string) => api.knowledgeQuery({ question: q, top_k: 5 }),
@@ -36,16 +31,34 @@ export default function KnowledgePage() {
   const result = mutation.data
   const hasResult = result && !mutation.isPending
   const sources: Source[] = result?.sources ?? []
+  const indexedDocs = docsData?.documents?.filter((d) => d.status === "indexed") ?? []
 
   return (
     <div className="p-6 lg:p-8 space-y-6">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-2">
         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
           <Brain className="h-8 w-8 text-primary" />
-          Knowledge
+          Knowledge Explorer
         </h1>
-        <p className="text-muted-foreground">Ask questions and get answers grounded in your documents.</p>
+        <p className="text-muted-foreground">Search across all your documents and discover insights.</p>
       </motion.div>
+
+      {indexedDocs.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {indexedDocs.slice(0, 5).map((doc) => (
+            <div
+              key={doc.id}
+              className="flex items-center gap-1.5 rounded-full bg-muted/50 px-3 py-1 text-xs text-muted-foreground"
+            >
+              <FileText className="h-3 w-3" />
+              {doc.filename}
+            </div>
+          ))}
+          {indexedDocs.length > 5 && (
+            <span className="text-xs text-muted-foreground/60 self-center">+{indexedDocs.length - 5} more</span>
+          )}
+        </div>
+      )}
 
       <div className="relative">
         <div className="flex gap-3">
@@ -53,7 +66,7 @@ export default function KnowledgePage() {
             <Input
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
-              placeholder="Ask a question..."
+              placeholder="Ask anything about your documents..."
               className="h-12 pr-4 text-base rounded-xl"
               onKeyDown={(e) => e.key === "Enter" && handleAsk()}
             />
@@ -64,27 +77,13 @@ export default function KnowledgePage() {
             className="h-12 px-6 rounded-xl gap-2"
           >
             {mutation.isPending ? (
-              <Sparkles className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <Send className="h-4 w-4" />
             )}
             Ask
           </Button>
         </div>
-
-        {!hasResult && !mutation.isPending && !mutation.isError && (
-          <div className="flex flex-wrap gap-2 mt-4">
-            {suggestionQuestions.map((q) => (
-              <button
-                key={q}
-                onClick={() => setQuestion(q)}
-                className="text-xs px-3 py-1.5 rounded-full bg-muted hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {q}
-              </button>
-            ))}
-          </div>
-        )}
       </div>
 
       {mutation.isPending && (
@@ -92,10 +91,10 @@ export default function KnowledgePage() {
           <Card className="border-0 shadow-sm bg-gradient-to-br from-primary/5 to-transparent">
             <CardContent className="p-8 text-center">
               <div className="inline-flex rounded-xl bg-primary/10 p-3 mb-4">
-                <Sparkles className="h-6 w-6 text-primary animate-pulse" />
+                <Search className="h-6 w-6 text-primary animate-pulse" />
               </div>
               <p className="font-medium">Searching your knowledge...</p>
-              <p className="text-sm text-muted-foreground mt-1">Analyzing documents and generating answer</p>
+              <p className="text-sm text-muted-foreground mt-1">Scanning documents and generating answer</p>
             </CardContent>
           </Card>
         </motion.div>
@@ -104,18 +103,14 @@ export default function KnowledgePage() {
       {mutation.isError && (
         <Card className="border-0 shadow-sm border-destructive/20 bg-destructive/5">
           <CardContent className="p-6 text-center">
-            <p className="text-destructive font-medium">Failed to get answer</p>
+            <p className="text-destructive font-medium">Something went wrong</p>
             <p className="text-sm text-muted-foreground mt-1">Please try again or rephrase your question.</p>
           </CardContent>
         </Card>
       )}
 
       {hasResult && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="space-y-6"
-        >
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
           <Card className="border-0 shadow-md bg-gradient-to-br from-primary/5 to-transparent">
             <CardContent className="p-6">
               <div className="flex items-center gap-2 mb-4">
@@ -128,10 +123,7 @@ export default function KnowledgePage() {
                 </div>
               </div>
               <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed">
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  rehypePlugins={[rehypeHighlight]}
-                >
+                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
                   {result.answer}
                 </ReactMarkdown>
               </div>
@@ -182,11 +174,7 @@ export default function KnowledgePage() {
           )}
 
           <div className="flex justify-center">
-            <Button
-              variant="outline"
-              onClick={() => { setQuestion(""); mutation.reset() }}
-              className="rounded-full gap-2"
-            >
+            <Button variant="outline" onClick={() => { setQuestion(""); mutation.reset() }} className="rounded-full gap-2">
               <ArrowRight className="h-4 w-4" />
               Ask another question
             </Button>
@@ -198,12 +186,24 @@ export default function KnowledgePage() {
         <Card className="border-0 shadow-sm bg-gradient-to-br from-muted/50 to-transparent">
           <CardContent className="p-12 text-center">
             <div className="inline-flex rounded-xl bg-primary/5 p-4 mb-4">
-              <Lightbulb className="h-10 w-10 text-primary opacity-60" />
+              <Layers className="h-10 w-10 text-primary opacity-60" />
             </div>
-            <p className="font-medium text-lg">Ask anything about your documents</p>
+            <p className="font-medium text-lg">Explore your knowledge</p>
             <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto">
-              I&apos;ll search your knowledge base and provide answers with sources.
+              Ask questions across all your documents at once. I&apos;ll find the most relevant information.
             </p>
+            {indexedDocs.length > 0 && (
+              <p className="text-xs text-muted-foreground/60 mt-3">
+                {indexedDocs.length} document{indexedDocs.length !== 1 ? "s" : ""} available
+              </p>
+            )}
+            {indexedDocs.length === 0 && (
+              <div className="mt-4">
+                <Button variant="outline" size="sm" asChild>
+                  <a href="/library">Upload a document first</a>
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

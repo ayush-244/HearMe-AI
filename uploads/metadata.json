@@ -1,11 +1,12 @@
 {
-  "95841402-d2b7-42e1-95f4-73abf2f03910": {
-    "id": "95841402-d2b7-42e1-95f4-73abf2f03910",
+  "5ca1edb5-5b5e-45f3-997d-5cd19f9df7eb": {
+    "id": "5ca1edb5-5b5e-45f3-997d-5cd19f9df7eb",
     "filename": "Ayush_resume.pdf",
     "file_type": "pdf",
     "size": 172286,
-    "status": "extracted",
-    "upload_time": "2026-06-28T10:38:34.774735+00:00",
-    "storage_path": "C:\\Users\\ayush\\Desktop\\HearMe AI\\uploads\\pdf\\95841402-d2b7-42e1-95f4-73abf2f03910.pdf"
+    "status": "indexed",
+    "upload_time": "2026-06-28T17:26:54.323313+00:00",
+    "storage_path": "C:\\Users\\ayush\\Desktop\\HearMe AI\\uploads\\pdf\\5ca1edb5-5b5e-45f3-997d-5cd19f9df7eb.pdf",
+    "failed_stage": null
   }
 }

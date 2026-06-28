@@ -1,8 +1,11 @@
 "use client"
 
-import { useState, useRef, useEffect, useCallback, memo } from "react"
+import { Suspense, useState, useRef, useEffect, useCallback, useMemo, memo } from "react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useSearchParams, useRouter } from "next/navigation"
 import { api } from "@/services/api-client"
+import { useConversation, useCreateConversation, useAddMessage, useAddAttachment } from "@/hooks/use-conversations"
+import { useUiStore } from "@/store/ui-store"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -18,10 +21,16 @@ import {
   RefreshCw,
   User,
   StopCircle,
-  Lightbulb,
+  Paperclip,
+  X,
+  Loader2,
+  FileText,
+  CheckCircle2,
+  AlertCircle,
 } from "lucide-react"
 import type { ChatMessage } from "@/types"
 import { motion, AnimatePresence } from "framer-motion"
+import { toast } from "@/components/ui/toast"
 
 const ThinkingDots = memo(function ThinkingDots() {
   return (
@@ -38,21 +47,15 @@ const ThinkingDots = memo(function ThinkingDots() {
   )
 })
 
-const suggestedFollowUps = [
-  "Tell me more about that",
-  "Can you summarize this?",
-  "What are the key insights?",
-  "How does this relate to my other documents?",
-]
-
-interface MessageBubbleProps {
+const MessageBubble = memo(function MessageBubble({
+  msg,
+  onCopy,
+  onRegenerate,
+}: {
   msg: ChatMessage
   onCopy: (content: string) => void
   onRegenerate: () => void
-  onFollowUp: (text: string) => void
-}
-
-const MessageBubble = memo(function MessageBubble({ msg, onCopy, onRegenerate, onFollowUp }: MessageBubbleProps) {
+}) {
   const [copied, setCopied] = useState(false)
 
   const handleCopy = useCallback(() => {
@@ -69,7 +72,7 @@ const MessageBubble = memo(function MessageBubble({ msg, onCopy, onRegenerate, o
       className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
     >
       {msg.role === "assistant" && (
-        <Avatar className="h-8 w-8 mt-0.5 ring-2 ring-primary/20">
+        <Avatar className="h-8 w-8 mt-0.5 ring-2 ring-primary/20 shrink-0">
           <AvatarFallback className="bg-gradient-to-br from-primary to-primary/60 text-primary-foreground">
             <Sparkles className="h-4 w-4" />
           </AvatarFallback>
@@ -84,10 +87,7 @@ const MessageBubble = memo(function MessageBubble({ msg, onCopy, onRegenerate, o
         ) : (
           <div className="rounded-2xl bg-muted/50 border px-4 py-3 shadow-sm">
             <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-muted prose-code:text-primary">
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                rehypePlugins={[rehypeHighlight]}
-              >
+              <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
                 {msg.content}
               </ReactMarkdown>
             </div>
@@ -113,31 +113,12 @@ const MessageBubble = memo(function MessageBubble({ msg, onCopy, onRegenerate, o
                 <RefreshCw className="h-3.5 w-3.5" />
               </Button>
             </div>
-
-            {msg.role === "assistant" && msg.id !== "welcome" && (
-              <div className="mt-3 pt-2 border-t border-border/50">
-                <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
-                  <Lightbulb className="h-3 w-3" /> Follow up
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {suggestedFollowUps.map((suggestion) => (
-                    <button
-                      key={suggestion}
-                      onClick={() => onFollowUp(suggestion)}
-                      className="text-xs px-2.5 py-1 rounded-full bg-muted hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {suggestion}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         )}
       </div>
 
       {msg.role === "user" && (
-        <Avatar className="h-8 w-8 mt-0.5 ring-2 ring-muted">
+        <Avatar className="h-8 w-8 mt-0.5 ring-2 ring-muted shrink-0">
           <AvatarFallback className="bg-muted">
             <User className="h-4 w-4" />
           </AvatarFallback>
@@ -147,20 +128,45 @@ const MessageBubble = memo(function MessageBubble({ msg, onCopy, onRegenerate, o
   )
 })
 
-export default function ChatPage() {
+interface UploadProgress {
+  status: "uploading" | "processing" | "ready" | "failed"
+  progress?: number
+  error?: string
+}
+
+function ChatPageInner() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
   const queryClient = useQueryClient()
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: "welcome",
-      role: "assistant",
-      content: "Hello! I'm **HearMe AI**. I can answer questions using your uploaded documents and remember information about you across conversations. How can I help today?",
-      timestamp: new Date().toISOString(),
-    },
-  ])
+  const { activeConversationId, setActiveConversation } = useUiStore()
+
+  const convId = searchParams.get("id")
+  const { data: conversation, isLoading: convLoading } = useConversation(convId)
+  const createConv = useCreateConversation()
+  const addMsg = useAddMessage()
+  const addAttach = useAddAttachment()
+
   const [input, setInput] = useState("")
   const [isStreaming, setIsStreaming] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const messages = useMemo(() => conversation?.messages ?? [], [conversation?.messages])
+  const attachedFiles = useMemo(() => conversation?.attached_documents ?? [], [conversation?.attached_documents])
+
+  useEffect(() => {
+    if (convId) {
+      setActiveConversation(convId)
+    }
+  }, [convId, setActiveConversation])
+
+  useEffect(() => {
+    if (!convId && activeConversationId) {
+      router.push(`/chat?id=${activeConversationId}`)
+    }
+  }, [convId, activeConversationId, router])
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -171,58 +177,45 @@ export default function ChatPage() {
     }
   }, [messages, isStreaming])
 
-  const chatMutation = useMutation({
-    mutationFn: async (text: string) => {
-      setIsStreaming(true)
-      return api.sendMessage(text, "auto", messages)
-    },
-    onSuccess: (result, variables) => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Math.random().toString(36).slice(2),
-          role: "assistant",
-          content: result.reply,
-          timestamp: new Date().toISOString(),
-        },
-      ])
-      setIsStreaming(false)
-      api.extractMemory({ user_text: variables }).then(() => queryClient.invalidateQueries({ queryKey: ["memories"] })).catch(() => {})
-    },
-    onError: () => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Math.random().toString(36).slice(2),
-          role: "assistant",
-          content: "I encountered an error processing your message. Please try again.",
-          timestamp: new Date().toISOString(),
-        },
-      ])
-      setIsStreaming(false)
-    },
-  })
+  async function ensureConversation(): Promise<string> {
+    if (convId) return convId
+    const conv = await createConv.mutateAsync("")
+    setActiveConversation(conv.id)
+    router.push(`/chat?id=${conv.id}`, { scroll: false })
+    return conv.id
+  }
 
   const knowledgeMutation = useMutation({
     mutationFn: async (text: string) => {
-      return api.knowledgeQuery({ question: text, top_k: 5 })
+      const docIds = attachedFiles.map((f) => f.document_id)
+      return api.knowledgeQuery({
+        question: text,
+        top_k: 5,
+        document_ids: docIds.length > 0 ? docIds : undefined,
+      })
     },
-    onSuccess: (result) => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Math.random().toString(36).slice(2),
+    onSuccess: async (result, variables) => {
+      setIsStreaming(true)
+      try {
+        const cid = await ensureConversation()
+        await addMsg.mutateAsync({ convId: cid, role: "user", content: variables })
+        await addMsg.mutateAsync({
+          convId: cid,
           role: "assistant",
           content: result.answer,
           citations: result.citations,
-          sources: result.sources,
-          timestamp: new Date().toISOString(),
-        },
-      ])
+        })
+        api.extractMemory({ user_text: variables, assistant_text: result.answer })
+          .then(() => queryClient.invalidateQueries({ queryKey: ["memories"] }))
+          .catch(() => {})
+      } catch {
+        toast({ title: "Failed to save message", variant: "destructive" })
+      }
       setIsStreaming(false)
     },
     onError: () => {
       setIsStreaming(false)
+      toast({ title: "Failed to get answer", variant: "destructive" })
     },
   })
 
@@ -230,11 +223,8 @@ export default function ChatPage() {
     const text = input.trim()
     if (!text || isStreaming) return
     setInput("")
-    setMessages((prev) => [
-      ...prev,
-      { id: Math.random().toString(36).slice(2), role: "user", content: text, timestamp: new Date().toISOString() },
-    ])
-    chatMutation.mutate(text)
+    setIsStreaming(true)
+    knowledgeMutation.mutate(text)
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -251,58 +241,152 @@ export default function ChatPage() {
   function regenerate() {
     const lastUser = [...messages].reverse().find((m) => m.role === "user")
     if (lastUser) {
-      setMessages((prev) => prev.slice(0, -1))
       setIsStreaming(true)
-      chatMutation.mutate(lastUser.content)
+      knowledgeMutation.mutate(lastUser.content)
     }
   }
 
-  function handleFollowUp(text: string) {
-    setInput(text)
-    inputRef.current?.focus()
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadProgress({ status: "uploading", progress: 0 })
+    try {
+      const result = await api.uploadDocument(file) as { document_id: string }
+      const docId = result.document_id
+      setUploadProgress({ status: "processing" })
+
+      await runPipeline(docId)
+
+      let targetConvId = convId
+      if (!targetConvId) {
+          const conv = await createConv.mutateAsync("")
+          targetConvId = conv.id
+          setActiveConversation(conv.id)
+          router.push(`/chat?id=${conv.id}`, { scroll: false })
+      }
+
+      await addAttach.mutateAsync({
+        convId: targetConvId!,
+        documentId: docId,
+        filename: file.name,
+        fileType: file.name.split(".").pop() || "unknown",
+      })
+
+      setUploadProgress({ status: "ready" })
+      toast({ title: "Document ready", variant: "success" })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Upload failed"
+      setUploadProgress({ status: "failed", error: msg })
+      toast({ title: "Upload failed", variant: "destructive" })
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""
+    }
   }
 
-  const suggestedPrompts = [
-    "What can I ask you?",
-    "Upload a document for me",
-    "Tell me about my memories",
-    "How does the knowledge system work?",
-  ]
+  async function runPipeline(docId: string) {
+    const stages = ["extract", "analyze", "chunk", "embed", "index"]
+    for (const stage of stages) {
+      try {
+        switch (stage) {
+          case "extract": await api.extractDocument(docId); break
+          case "analyze": await api.analyzeDocument(docId); break
+          case "chunk": await api.chunkDocument(docId); break
+          case "embed": await api.embedDocument(docId); break
+          case "index": await api.indexDocument(docId); break
+        }
+      } catch (err) {
+        throw new Error(`Pipeline failed at ${stage}: ${err instanceof Error ? err.message : "Unknown error"}`)
+      }
+    }
+  }
 
-  const hasMessages = messages.length > 1
+  async function removeAttachedFile(documentId: string) {
+    if (!convId) return
+    try {
+      await api.removeAttachment(convId, documentId)
+      queryClient.invalidateQueries({ queryKey: ["conversation", convId] })
+    } catch {}
+  }
+
+  function retryUpload() {
+    if (fileInputRef.current) {
+      fileInputRef.current.click()
+    }
+  }
+
+  const showWelcome = !convId && !convLoading && messages.length === 0
 
   return (
     <div className="flex h-[calc(100vh-3.5rem)] flex-col">
       <ScrollArea ref={scrollRef} className="flex-1 px-4 lg:px-8">
         <div className="mx-auto max-w-3xl py-6 space-y-6">
-          {messages.length === 1 && (
+          {showWelcome && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-center py-12 space-y-6"
+              className="text-center py-16 space-y-6"
             >
               <div className="inline-flex rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 p-4">
-                <Sparkles className="h-14 w-14 text-primary" />
+                <Sparkles className="h-16 w-16 text-primary" />
               </div>
               <div className="space-y-2">
-                <h2 className="text-3xl font-bold">How can I help you?</h2>
-                <p className="text-muted-foreground max-w-md mx-auto">
-                  Ask me anything — I can search your documents, remember facts about you, and reason across knowledge.
+                <h1 className="text-4xl font-bold">How can I help you?</h1>
+                <p className="text-muted-foreground max-w-lg mx-auto text-lg">
+                  Ask me anything about your documents — I&apos;ll search, analyze, and answer with sources.
                 </p>
               </div>
               <div className="flex flex-wrap justify-center gap-2">
-                {suggestedPrompts.map((p) => (
+                {[
+                  "Summarize my documents",
+                  "What are the key topics?",
+                  "Find insights across files",
+                  "Analyze this for me",
+                ].map((p) => (
                   <Button
                     key={p}
                     variant="outline"
                     size="sm"
                     onClick={() => { setInput(p); inputRef.current?.focus() }}
-                    className="rounded-full text-xs"
+                    className="rounded-full text-sm"
                   >
                     {p}
                   </Button>
                 ))}
               </div>
+            </motion.div>
+          )}
+
+          {convLoading && (
+            <div className="flex justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          )}
+
+          {attachedFiles.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex flex-wrap gap-2"
+            >
+              {attachedFiles.map((doc) => (
+                <div
+                  key={doc.document_id}
+                  className="flex items-center gap-2 rounded-lg border bg-muted/30 px-3 py-1.5 text-sm"
+                >
+                  <FileText className="h-4 w-4 text-primary" />
+                  <span className="text-xs font-medium truncate max-w-[120px]">{doc.filename}</span>
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-5 w-5 -mr-1"
+                    onClick={() => removeAttachedFile(doc.document_id)}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              ))}
             </motion.div>
           )}
 
@@ -313,7 +397,6 @@ export default function ChatPage() {
                 msg={msg}
                 onCopy={copyMessage}
                 onRegenerate={regenerate}
-                onFollowUp={handleFollowUp}
               />
             ))}
           </AnimatePresence>
@@ -324,7 +407,7 @@ export default function ChatPage() {
               animate={{ opacity: 1, y: 0 }}
               className="flex gap-3"
             >
-              <Avatar className="h-8 w-8 ring-2 ring-primary/20">
+              <Avatar className="h-8 w-8 ring-2 ring-primary/20 shrink-0">
                 <AvatarFallback className="bg-gradient-to-br from-primary to-primary/60 text-primary-foreground">
                   <Sparkles className="h-4 w-4" />
                 </AvatarFallback>
@@ -338,20 +421,60 @@ export default function ChatPage() {
       </ScrollArea>
 
       <div className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4 lg:px-8">
-        <div className="mx-auto max-w-3xl">
-          {hasMessages && (
-            <div className="flex items-center gap-2 mb-3 overflow-x-auto pb-1">
-              {suggestedPrompts.slice(0, 2).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => { setInput(p); inputRef.current?.focus() }}
-                  className="text-xs whitespace-nowrap px-3 py-1.5 rounded-full bg-muted hover:bg-accent text-muted-foreground hover:text-foreground transition-colors shrink-0"
-                >
-                  {p}
-                </button>
-              ))}
-            </div>
+        <div className="mx-auto max-w-3xl space-y-3">
+          {uploadProgress && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center justify-between rounded-lg border bg-muted/30 px-4 py-2.5"
+            >
+              <div className="flex items-center gap-3">
+                {uploadProgress.status === "uploading" || uploadProgress.status === "processing" ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                ) : uploadProgress.status === "ready" ? (
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                ) : (
+                  <AlertCircle className="h-4 w-4 text-destructive" />
+                )}
+                <div>
+                  <p className="text-sm font-medium">
+                    {uploadProgress.status === "uploading" && "Uploading..."}
+                    {uploadProgress.status === "processing" && "Processing..."}
+                    {uploadProgress.status === "ready" && "Ready"}
+                    {uploadProgress.status === "failed" && "Upload failed"}
+                  </p>
+                  {uploadProgress.error && (
+                    <p className="text-xs text-destructive mt-0.5">{uploadProgress.error}</p>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {uploadProgress.status === "processing" && (
+                  <div className="flex gap-1">
+                    {[0, 1, 2].map((i) => (
+                      <motion.div
+                        key={i}
+                        className="h-2 w-2 rounded-full bg-primary/60"
+                        animate={{ opacity: [0.3, 1, 0.3] }}
+                        transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.2 }}
+                      />
+                    ))}
+                  </div>
+                )}
+                {uploadProgress.status === "failed" && (
+                  <Button variant="outline" size="sm" className="h-8 text-xs" onClick={retryUpload}>
+                    <RefreshCw className="h-3 w-3 mr-1" /> Retry
+                  </Button>
+                )}
+                {uploadProgress.status === "ready" && (
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setUploadProgress(null)}>
+                    <X className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
+            </motion.div>
           )}
+
           <div className="flex gap-3 items-end">
             <div className="flex-1 relative">
               <textarea
@@ -359,7 +482,7 @@ export default function ChatPage() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask anything..."
+                placeholder="Ask anything about your documents..."
                 rows={1}
                 className="flex w-full rounded-xl border bg-muted/50 px-4 py-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none min-h-[48px] max-h-[200px]"
                 disabled={isStreaming}
@@ -371,20 +494,51 @@ export default function ChatPage() {
                 }}
               />
             </div>
-            <Button
-              onClick={isStreaming ? () => setIsStreaming(false) : handleSend}
-              disabled={!input.trim() && !isStreaming}
-              size="icon"
-              className="h-12 w-12 shrink-0 rounded-xl"
-            >
-              {isStreaming ? <StopCircle className="h-5 w-5" /> : <Send className="h-5 w-5" />}
-            </Button>
+            <div className="flex gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.docx,.txt,.md"
+                className="hidden"
+                onChange={handleFileUpload}
+              />
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-12 w-12 shrink-0 rounded-xl"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isStreaming || uploadProgress?.status === "uploading" || uploadProgress?.status === "processing"}
+                title="Attach document"
+              >
+                <Paperclip className="h-5 w-5" />
+              </Button>
+              <Button
+                onClick={isStreaming ? () => setIsStreaming(false) : handleSend}
+                disabled={!input.trim() && !isStreaming}
+                size="icon"
+                className="h-12 w-12 shrink-0 rounded-xl"
+              >
+                {isStreaming ? <StopCircle className="h-5 w-5" /> : <Send className="h-5 w-5" />}
+              </Button>
+            </div>
           </div>
-          <p className="text-xs text-muted-foreground text-center mt-3">
+          <p className="text-xs text-muted-foreground text-center">
             Responses are grounded in your documents and personal memory
           </p>
         </div>
       </div>
     </div>
+  )
+}
+
+export default function ChatPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-[calc(100vh-3.5rem)] items-center justify-center">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    }>
+      <ChatPageInner />
+    </Suspense>
   )
 }

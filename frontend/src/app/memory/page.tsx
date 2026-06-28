@@ -1,13 +1,12 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useCallback } from "react"
 import { useMemories, useSearchMemories, useDeleteMemory } from "@/hooks/use-memory"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import {
   Brain,
   Search,
@@ -16,18 +15,31 @@ import {
   Sparkles,
   Clock,
   Heart,
-  Star,
-  Bookmark,
   Lightbulb,
   X,
+  User,
+  BookOpen,
+  Award,
 } from "lucide-react"
 import { formatDate } from "@/lib/utils"
 import { motion, AnimatePresence } from "framer-motion"
 import { toast } from "@/components/ui/toast"
+import { useDeveloperStore } from "@/stores/developer-store"
+
+interface MemoryDisplay {
+  memory_id: string
+  type: string
+  content: string
+  summary: string
+  created_at: string
+  pinned: boolean
+  importance?: number
+  confidence?: number
+}
 
 const typeConfig: Record<string, { label: string; icon: React.ElementType; color: string; bg: string }> = {
-  semantic: { label: "Fact", icon: Brain, color: "text-blue-500", bg: "bg-blue-500/10" },
-  episodic: { label: "Memory", icon: Clock, color: "text-green-500", bg: "bg-green-500/10" },
+  semantic: { label: "Fact", icon: BookOpen, color: "text-blue-500", bg: "bg-blue-500/10" },
+  episodic: { label: "Experience", icon: Clock, color: "text-green-500", bg: "bg-green-500/10" },
   preference: { label: "Preference", icon: Heart, color: "text-purple-500", bg: "bg-purple-500/10" },
   working: { label: "Working", icon: Lightbulb, color: "text-amber-500", bg: "bg-amber-500/10" },
 }
@@ -35,15 +47,17 @@ const typeConfig: Record<string, { label: string; icon: React.ElementType; color
 function MemoryCard({
   mem,
   onDelete,
+  developerMode,
 }: {
-  mem: { memory_id: string; type: string; content: string; summary: string; created_at: string; pinned: boolean; importance: number }
+  mem: MemoryDisplay
   onDelete: (id: string) => void
+  developerMode: boolean
 }) {
   const [deleting, setDeleting] = useState(false)
   const config = typeConfig[mem.type] || typeConfig.semantic
   const Icon = config.icon
 
-  async function handleDelete() {
+  const handleDelete = useCallback(async () => {
     setDeleting(true)
     try {
       await onDelete(mem.memory_id)
@@ -52,7 +66,7 @@ function MemoryCard({
       toast({ title: "Delete failed", variant: "destructive" })
     }
     setDeleting(false)
-  }
+  }, [mem.memory_id, onDelete])
 
   const displayText = mem.summary || mem.content
 
@@ -75,9 +89,7 @@ function MemoryCard({
                 <Badge variant="secondary" className={`${config.color} ${config.bg} border-0 text-[11px]`}>
                   {config.label}
                 </Badge>
-                {mem.pinned && (
-                  <Pin className="h-3 w-3 text-amber-500" />
-                )}
+                {mem.pinned && <Pin className="h-3 w-3 text-amber-500" />}
               </div>
               <p className="text-sm leading-relaxed">{displayText}</p>
               <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
@@ -85,6 +97,16 @@ function MemoryCard({
                   <Clock className="h-3 w-3" />
                   {formatDate(mem.created_at)}
                 </span>
+                {developerMode && mem.importance !== undefined && (
+                  <span className="text-[10px] text-muted-foreground/60">
+                    Importance: {(mem.importance * 100).toFixed(0)}%
+                  </span>
+                )}
+                {developerMode && mem.confidence !== undefined && (
+                  <span className="text-[10px] text-muted-foreground/60">
+                    Confidence: {(mem.confidence * 100).toFixed(0)}%
+                  </span>
+                )}
               </div>
             </div>
             <Button
@@ -105,14 +127,15 @@ function MemoryCard({
 
 export default function MemoryPage() {
   const [query, setQuery] = useState("")
-  const [activeTab, setActiveTab] = useState("all")
   const [searchResults, setSearchResults] = useState<{
-    memories: { memory_id: string; type: string; content: string; summary: string; created_at: string; pinned: boolean; importance: number }[]
+    memories: MemoryDisplay[]
     count: number
   } | null>(null)
   const [isSearching, setIsSearching] = useState(false)
 
-  const { data, isLoading } = useMemories({ include_working: true })
+  const developerMode = useDeveloperStore((s) => s.developerMode)
+
+  const { data, isLoading } = useMemories({ include_working: !developerMode })
   const searchMem = useSearchMemories()
   const deleteMem = useDeleteMemory()
 
@@ -121,13 +144,19 @@ export default function MemoryPage() {
     [searchResults, data]
   )
 
-  const pinnedMemories = useMemo(() => memories.filter((m) => m.pinned), [memories])
-  const facts = useMemo(() => memories.filter((m) => m.type === "semantic"), [memories])
-  const preferences = useMemo(() => memories.filter((m) => m.type === "preference"), [memories])
-  const recentMemories = useMemo(
-    () => [...memories].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 10),
-    [memories]
-  )
+  const grouped = useMemo(() => {
+    const groups: Record<string, MemoryDisplay[]> = {
+      facts: [],
+      preferences: [],
+      experiences: [],
+    }
+    for (const m of memories) {
+      if (m.type === "semantic") groups.facts.push(m)
+      else if (m.type === "preference") groups.preferences.push(m)
+      else if (m.type === "episodic") groups.experiences.push(m)
+    }
+    return groups
+  }, [memories])
 
   async function handleSearch() {
     if (!query.trim()) {
@@ -137,7 +166,7 @@ export default function MemoryPage() {
     setIsSearching(true)
     try {
       const result = await searchMem.mutateAsync({ query, top_k: 20 })
-      setSearchResults(result)
+      setSearchResults(result as typeof searchResults)
     } catch {
       toast({ title: "Search failed", variant: "destructive" })
     }
@@ -148,27 +177,14 @@ export default function MemoryPage() {
     await deleteMem.mutateAsync(id)
   }
 
-  function getTabMemories(tab: string) {
-    switch (tab) {
-      case "all": return memories
-      case "pinned": return pinnedMemories
-      case "facts": return facts
-      case "preferences": return preferences
-      case "recent": return recentMemories
-      default: return memories
-    }
-  }
-
-  const tabMemories = getTabMemories(activeTab)
-
   return (
     <div className="p-6 lg:p-8 space-y-6">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-1">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-2">
         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
-          <Brain className="h-8 w-8 text-purple-500" />
-          My AI Memory
+          <User className="h-8 w-8 text-purple-500" />
+          Things I Know About You
         </h1>
-        <p className="text-muted-foreground">Facts, preferences, and experiences I remember about you.</p>
+        <p className="text-muted-foreground">Facts, preferences, and experiences I&apos;ve learned from our conversations.</p>
       </motion.div>
 
       <div className="flex gap-3">
@@ -197,9 +213,9 @@ export default function MemoryPage() {
         <div className="grid gap-4 grid-cols-2 sm:grid-cols-4">
           {[
             { label: "All Memories", count: memories.length, icon: Brain, color: "text-purple-500", bg: "bg-purple-500/10" },
-            { label: "Facts", count: facts.length, icon: Star, color: "text-blue-500", bg: "bg-blue-500/10" },
-            { label: "Preferences", count: preferences.length, icon: Heart, color: "text-pink-500", bg: "bg-pink-500/10" },
-            { label: "Pinned", count: pinnedMemories.length, icon: Bookmark, color: "text-amber-500", bg: "bg-amber-500/10" },
+            { label: "Facts", count: grouped.facts.length, icon: BookOpen, color: "text-blue-500", bg: "bg-blue-500/10" },
+            { label: "Preferences", count: grouped.preferences.length, icon: Heart, color: "text-pink-500", bg: "bg-pink-500/10" },
+            { label: "Experiences", count: grouped.experiences.length, icon: Award, color: "text-amber-500", bg: "bg-amber-500/10" },
           ].map((stat) => (
             <Card key={stat.label} className="border-0 shadow-sm">
               <CardContent className="p-4 flex items-center gap-3">
@@ -216,55 +232,90 @@ export default function MemoryPage() {
         </div>
       )}
 
-      <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="all" className="text-xs">All</TabsTrigger>
-          <TabsTrigger value="pinned" className="text-xs gap-1">
-            <Pin className="h-3 w-3" /> Pinned
-          </TabsTrigger>
-          <TabsTrigger value="facts" className="text-xs gap-1">
-            <Star className="h-3 w-3" /> Facts
-          </TabsTrigger>
-          <TabsTrigger value="preferences" className="text-xs gap-1">
-            <Heart className="h-3 w-3" /> Preferences
-          </TabsTrigger>
-          <TabsTrigger value="recent" className="text-xs gap-1">
-            <Clock className="h-3 w-3" /> Recent
-          </TabsTrigger>
-        </TabsList>
-
-        {["all", "pinned", "facts", "preferences", "recent"].map((tab) => (
-          <TabsContent key={tab} value={tab} className="mt-4">
-            {isLoading ? (
-              <div className="grid gap-4 md:grid-cols-2">
-                {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28" />)}
-              </div>
-            ) : tabMemories.length === 0 ? (
-              <Card className="border-0 shadow-sm">
-                <CardContent className="p-12 text-center text-muted-foreground">
-                  <Brain className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                  <p className="font-medium">
-                    {query ? "No matching memories" : "No memories yet"}
-                  </p>
-                  <p className="text-sm mt-1">
-                    {query
-                      ? "Try a different search term."
-                      : "Start chatting to build your memory profile. I'll remember facts, preferences, and experiences."}
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
+      {isLoading ? (
+        <div className="grid gap-4 md:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28" />)}
+        </div>
+      ) : memories.length === 0 ? (
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-12 text-center text-muted-foreground">
+            <User className="h-12 w-12 mx-auto mb-3 opacity-50" />
+            <p className="font-medium text-lg">Nothing yet</p>
+            <p className="text-sm mt-2 max-w-md mx-auto">
+              Start chatting and I&apos;ll automatically remember facts, preferences, and experiences about you.
+            </p>
+            {query && (
+              <p className="text-sm mt-2 text-muted-foreground">Try a different search term.</p>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-8">
+          {grouped.facts.length > 0 && (
+            <div className="space-y-3">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <BookOpen className="h-5 w-5 text-blue-500" />
+                Facts
+              </h2>
               <AnimatePresence mode="popLayout">
                 <div className="grid gap-4 md:grid-cols-2">
-                  {tabMemories.map((mem) => (
-                    <MemoryCard key={mem.memory_id} mem={mem} onDelete={handleDelete} />
+                  {grouped.facts.map((mem) => (
+                    <MemoryCard key={mem.memory_id} mem={mem} onDelete={handleDelete} developerMode={developerMode} />
                   ))}
                 </div>
               </AnimatePresence>
-            )}
-          </TabsContent>
-        ))}
-      </Tabs>
+            </div>
+          )}
+
+          {grouped.preferences.length > 0 && (
+            <div className="space-y-3">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <Heart className="h-5 w-5 text-purple-500" />
+                Preferences
+              </h2>
+              <AnimatePresence mode="popLayout">
+                <div className="grid gap-4 md:grid-cols-2">
+                  {grouped.preferences.map((mem) => (
+                    <MemoryCard key={mem.memory_id} mem={mem} onDelete={handleDelete} developerMode={developerMode} />
+                  ))}
+                </div>
+              </AnimatePresence>
+            </div>
+          )}
+
+          {grouped.experiences.length > 0 && (
+            <div className="space-y-3">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <Award className="h-5 w-5 text-amber-500" />
+                Experiences
+              </h2>
+              <AnimatePresence mode="popLayout">
+                <div className="grid gap-4 md:grid-cols-2">
+                  {grouped.experiences.map((mem) => (
+                    <MemoryCard key={mem.memory_id} mem={mem} onDelete={handleDelete} developerMode={developerMode} />
+                  ))}
+                </div>
+              </AnimatePresence>
+            </div>
+          )}
+
+          {searchResults && memories.filter((m) => m.type === "working").length > 0 && developerMode && (
+            <div className="space-y-3">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <Lightbulb className="h-5 w-5 text-amber-500" />
+                Working Memory
+              </h2>
+              <AnimatePresence mode="popLayout">
+                <div className="grid gap-4 md:grid-cols-2">
+                  {memories.filter((m) => m.type === "working").map((mem) => (
+                    <MemoryCard key={mem.memory_id} mem={mem} onDelete={handleDelete} developerMode={developerMode} />
+                  ))}
+                </div>
+              </AnimatePresence>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

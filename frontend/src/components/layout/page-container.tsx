@@ -8,7 +8,7 @@ export function PageContainer({ children }: { children: React.ReactNode }) {
   const { developerMode } = useDeveloperStore()
 
   const devOffset = developerMode ? 240 : 0
-  const userOffset = sidebarOpen ? 240 : 64
+  const userOffset = sidebarOpen ? 300 : 64
 
   return (
     <div

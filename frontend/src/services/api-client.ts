@@ -1,6 +1,9 @@
 import { API_BASE } from "@/lib/constants"
 import type {
   ChatMessage,
+  Conversation,
+  ConversationDetail,
+  ConversationListResponse,
   Document,
   HealthResponse,
   KnowledgeQuery,
@@ -8,6 +11,7 @@ import type {
   MemoryEntry,
   MemoryExtractResponse,
   MemorySearchResponse,
+  MessageResponse,
   SearchQuery,
   SearchResponse,
 } from "@/types"
@@ -32,6 +36,39 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  // Conversations
+  createConversation: (title = "") =>
+    request<Conversation>("/conversations", { method: "POST", body: JSON.stringify({ title }) }),
+
+  listConversations: (search = "") =>
+    request<ConversationListResponse>(`/conversations${search ? `?search=${encodeURIComponent(search)}` : ""}`),
+
+  getConversation: (id: string) =>
+    request<ConversationDetail>(`/conversations/${id}`),
+
+  updateConversation: (id: string, updates: { title?: string; pinned?: boolean }) =>
+    request<Conversation>(`/conversations/${id}`, { method: "PATCH", body: JSON.stringify(updates) }),
+
+  deleteConversation: (id: string) =>
+    request<{ deleted: boolean }>(`/conversations/${id}`, { method: "DELETE" }),
+
+  addMessage: (convId: string, role: string, content: string, citations: string[] = []) =>
+    request<MessageResponse>(`/conversations/${convId}/messages`, {
+      method: "POST",
+      body: JSON.stringify({ role, content, citations }),
+    }),
+
+  getMessages: (convId: string, limit = 100) =>
+    request<{ messages: ChatMessage[]; total: number }>(`/conversations/${convId}/messages?limit=${limit}`),
+
+  addAttachment: (convId: string, documentId: string, filename: string, fileType: string) =>
+    request<{ document_id: string; filename: string; file_type: string; status: string; attached_at: string }>(
+      `/conversations/${convId}/attachments`,
+      { method: "POST", body: JSON.stringify({ document_id: documentId, filename, file_type: fileType }) }
+    ),
+
+  removeAttachment: (convId: string, documentId: string) =>
+    request<{ deleted: boolean }>(`/conversations/${convId}/attachments/${documentId}`, { method: "DELETE" }),
   // Health
   health: () => request<HealthResponse>("/health"),
 

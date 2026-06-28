@@ -1,6 +1,5 @@
 "use client"
 
-import { useCallback, useState } from "react"
 import { create } from "zustand"
 import { X } from "lucide-react"
 import { cn } from "@/lib/utils"

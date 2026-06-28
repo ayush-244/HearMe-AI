@@ -6,6 +6,9 @@ interface UiState {
   theme: "dark" | "light" | "system"
   activeConversationId: string | null
   selectedWorkspace: string
+}
+
+interface UiActions {
   toggleSidebar: () => void
   setSidebarOpen: (open: boolean) => void
   setTheme: (theme: "dark" | "light" | "system") => void
@@ -13,7 +16,7 @@ interface UiState {
   setSelectedWorkspace: (ws: string) => void
 }
 
-export const useUiStore = create<UiState>()(
+export const useUiStore = create<UiState & UiActions>()(
   persist(
     (set) => ({
       sidebarOpen: true,
