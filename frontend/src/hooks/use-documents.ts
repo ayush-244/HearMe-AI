@@ -16,25 +16,25 @@ export function useDeleteDocument() {
 
 export function useExtractDocument() {
   const qc = useQueryClient()
-  return useMutation({ mutationFn: (id: string) => api.extractDocument(id), onSuccess: () => qc.invalidateQueries({ queryKey: ["document"] }) })
+  return useMutation({ mutationFn: (id: string) => api.extractDocument(id), onSuccess: () => { qc.invalidateQueries({ queryKey: ["document"] }); qc.invalidateQueries({ queryKey: ["documents"] }) } })
 }
 
 export function useAnalyzeDocument() {
   const qc = useQueryClient()
-  return useMutation({ mutationFn: (id: string) => api.analyzeDocument(id), onSuccess: () => qc.invalidateQueries({ queryKey: ["document"] }) })
+  return useMutation({ mutationFn: (id: string) => api.analyzeDocument(id), onSuccess: () => { qc.invalidateQueries({ queryKey: ["document"] }); qc.invalidateQueries({ queryKey: ["documents"] }) } })
 }
 
 export function useChunkDocument() {
   const qc = useQueryClient()
-  return useMutation({ mutationFn: (id: string) => api.chunkDocument(id), onSuccess: () => qc.invalidateQueries({ queryKey: ["document"] }) })
+  return useMutation({ mutationFn: (id: string) => api.chunkDocument(id), onSuccess: () => { qc.invalidateQueries({ queryKey: ["document"] }); qc.invalidateQueries({ queryKey: ["documents"] }) } })
 }
 
 export function useEmbedDocument() {
   const qc = useQueryClient()
-  return useMutation({ mutationFn: (id: string) => api.embedDocument(id), onSuccess: () => qc.invalidateQueries({ queryKey: ["document"] }) })
+  return useMutation({ mutationFn: (id: string) => api.embedDocument(id), onSuccess: () => { qc.invalidateQueries({ queryKey: ["document"] }); qc.invalidateQueries({ queryKey: ["documents"] }) } })
 }
 
 export function useIndexDocument() {
   const qc = useQueryClient()
-  return useMutation({ mutationFn: (id: string) => api.indexDocument(id), onSuccess: () => qc.invalidateQueries({ queryKey: ["document"] }) })
+  return useMutation({ mutationFn: (id: string) => api.indexDocument(id), onSuccess: () => { qc.invalidateQueries({ queryKey: ["document"] }); qc.invalidateQueries({ queryKey: ["documents"] }) } })
 }

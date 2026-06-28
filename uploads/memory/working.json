@@ -1,0 +1,20 @@
+[
+  {
+    "memory_id": "b64d99bc-032f-40d0-be0f-d49312f637aa",
+    "user_id": "",
+    "workspace_id": "default",
+    "type": "working",
+    "content": "i am Btech 4th year student",
+    "summary": "i am Btech 4th year student",
+    "importance": 0.1425,
+    "confidence": 0.5,
+    "created_at": "2026-06-28T09:31:44.469017+00:00",
+    "updated_at": "2026-06-28T09:31:44.469017+00:00",
+    "last_accessed": "2026-06-28T09:31:44.469017+00:00",
+    "access_count": 0,
+    "embedding_version": "",
+    "checksum": "d0a091a9b340b88c",
+    "source": "conversation",
+    "pinned": false
+  }
+]

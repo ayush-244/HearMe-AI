@@ -197,6 +197,7 @@ class DocumentService:
                     filename=meta.filename,
                     file_type=meta.file_type,
                     size=meta.size,
+                    status=meta.status,
                     upload_time=meta.upload_time,
                 )
             )
@@ -431,6 +432,9 @@ class DocumentService:
 
         self._save_analysis(document_id, analysis)
 
+        meta.status = DocumentStatus.analyzed
+        self._save_metadata()
+
         logger.info("Analysis completed: id=%s, type=%s", document_id, analysis["document_type"])
 
         return AnalysisResponse(
@@ -514,6 +518,10 @@ class DocumentService:
         )
 
         self._save_chunks(document_id, result)
+
+        meta.status = DocumentStatus.chunked
+        self._save_metadata()
+
         return result
 
     def _save_chunks(self, document_id: str, result: dict) -> None:
@@ -582,3 +590,9 @@ class DocumentService:
 
     def get_chunks_data(self, document_id: str) -> Optional[dict]:
         return self._load_chunks_data(document_id)
+
+    def update_status(self, document_id: str, status: DocumentStatus) -> None:
+        meta = self._metadata.get(document_id)
+        if meta:
+            meta.status = status
+            self._save_metadata()

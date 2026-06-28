@@ -14,6 +14,10 @@ class FileType(str, Enum):
 class DocumentStatus(str, Enum):
     uploaded = "uploaded"
     extracted = "extracted"
+    analyzed = "analyzed"
+    chunked = "chunked"
+    embedded = "embedded"
+    indexed = "indexed"
     failed = "failed"
 
 
@@ -40,6 +44,7 @@ class DocumentListItem(BaseModel):
     filename: str
     file_type: FileType
     size: int
+    status: DocumentStatus
     upload_time: datetime
 
 

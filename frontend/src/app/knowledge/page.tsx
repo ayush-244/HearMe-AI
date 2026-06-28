@@ -3,231 +3,209 @@
 import { useState } from "react"
 import { useMutation } from "@tanstack/react-query"
 import { api } from "@/services/api-client"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { Brain, Search, FileText, Quote, Layers, Sparkles, BookOpen } from "lucide-react"
+import { Brain, Sparkles, FileText, BookOpen, Lightbulb, Send, ArrowRight } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
-import type { SearchResult } from "@/types"
+import rehypeHighlight from "rehype-highlight"
 import { motion } from "framer-motion"
+import type { Source } from "@/types"
+
+const suggestionQuestions = [
+  "What are my documents about?",
+  "Summarize the key topics",
+  "What insights can you find?",
+  "Tell me something interesting",
+]
 
 export default function KnowledgePage() {
-  const [searchQuery, setSearchQuery] = useState("")
-  const [searchResults, setSearchResults] = useState<SearchResult[]>([])
-  const [hasSearched, setHasSearched] = useState(false)
-
-  const searchMutation = useMutation({
-    mutationFn: (q: string) => api.search({ text: q, top_k: 10 }),
-    onSuccess: (data) => {
-      setSearchResults(data.results)
-      setHasSearched(true)
-    },
-  })
-
-  const knowledgeMutation = useMutation({
-    mutationFn: (q: string) => api.knowledgeQuery({ question: q, top_k: 5 }),
-  })
-
-  function handleSearch() {
-    const q = searchQuery.trim()
-    if (!q) return
-    searchMutation.mutate(q)
-  }
-
-  return (
-    <div className="p-6 lg:p-8 space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
-          <Brain className="h-8 w-8 text-primary" />
-          Knowledge Explorer
-        </h1>
-        <p className="text-muted-foreground">Search across indexed documents and explore knowledge chunks.</p>
-      </div>
-
-      <div className="flex gap-3 max-w-2xl">
-        <Input
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search your knowledge base..."
-          className="flex-1 h-11"
-          onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-        />
-        <Button onClick={handleSearch} disabled={!searchQuery.trim() || searchMutation.isPending} className="h-11">
-          <Search className="h-4 w-4 mr-2" />
-          Search
-        </Button>
-      </div>
-
-      <Tabs defaultValue="results">
-        <TabsList>
-          <TabsTrigger value="results"><Search className="h-4 w-4 mr-2" />Search Results</TabsTrigger>
-          <TabsTrigger value="reason"><Brain className="h-4 w-4 mr-2" />Reason</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="results" className="space-y-4 mt-4">
-          {searchMutation.isPending && (
-            <div className="text-center py-12 text-muted-foreground">
-              <Sparkles className="h-8 w-8 mx-auto mb-2 animate-pulse" />
-              <p>Searching knowledge base...</p>
-            </div>
-          )}
-
-          {searchMutation.isError && (
-            <Card className="border-destructive/50">
-              <CardContent className="p-6 text-center text-destructive">
-                Search failed. Please try again.
-              </CardContent>
-            </Card>
-          )}
-
-          {searchResults.length > 0 && !searchMutation.isPending && (
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                Found {searchResults.length} results
-              </p>
-              {searchResults.map((result, i) => (
-                <motion.div
-                  key={result.chunk_id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                >
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
-                          <span className="font-medium text-sm truncate">{result.title || "Untitled"}</span>
-                          {result.section && (
-                            <Badge variant="secondary" className="text-xs shrink-0">{result.section}</Badge>
-                          )}
-                        </div>
-                        <Badge variant={result.score > 0.7 ? "success" : result.score > 0.4 ? "warning" : "secondary"} className="shrink-0 ml-2">
-                          {(result.score * 100).toFixed(0)}%
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground line-clamp-3">{result.text}</p>
-                      <div className="flex items-center gap-2 mt-2 flex-wrap">
-                        {result.page > 0 && <span className="text-xs text-muted-foreground">Page {result.page}</span>}
-                        {result.keywords?.slice(0, 4).map((kw) => (
-                          <Badge key={kw} variant="outline" className="text-xs">{kw}</Badge>
-                        ))}
-                        <span className="text-xs text-muted-foreground ml-auto">
-                          S:{(result.semantic_score * 100).toFixed(0)}% K:{(result.keyword_score * 100).toFixed(0)}%
-                        </span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
-            </div>
-          )}
-
-          {hasSearched && searchResults.length === 0 && !searchMutation.isPending && (
-            <Card>
-              <CardContent className="p-12 text-center text-muted-foreground">
-                <BookOpen className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                <p className="font-medium">No results found</p>
-                <p className="text-sm mt-1">Try a different search query or upload more documents.</p>
-              </CardContent>
-            </Card>
-          )}
-
-          {!hasSearched && (
-            <Card>
-              <CardContent className="p-12 text-center text-muted-foreground">
-                <Layers className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                <p className="font-medium">Search your knowledge base</p>
-                <p className="text-sm mt-1">Enter a query above to search across all indexed documents.</p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        <TabsContent value="reason" className="space-y-4 mt-4">
-          <KnowledgeReasonTab />
-        </TabsContent>
-      </Tabs>
-    </div>
-  )
-}
-
-function KnowledgeReasonTab() {
   const [question, setQuestion] = useState("")
-  const [answer, setAnswer] = useState<string | null>(null)
-  const [citations, setCitations] = useState<string[]>([])
 
   const mutation = useMutation({
     mutationFn: (q: string) => api.knowledgeQuery({ question: q, top_k: 5 }),
-    onSuccess: (data) => {
-      setAnswer(data.answer)
-      setCitations(data.citations || [])
-    },
   })
 
+  function handleAsk() {
+    const q = question.trim()
+    if (!q) return
+    mutation.mutate(q)
+  }
+
+  const result = mutation.data
+  const hasResult = result && !mutation.isPending
+  const sources: Source[] = result?.sources ?? []
+
   return (
-    <div className="space-y-4">
-      <div className="flex gap-3 max-w-2xl">
-        <Input
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-          placeholder="Ask a question to reason across your knowledge..."
-          className="flex-1 h-11"
-          onKeyDown={(e) => e.key === "Enter" && !mutation.isPending && mutation.mutate(question)}
-        />
-        <Button onClick={() => mutation.mutate(question)} disabled={!question.trim() || mutation.isPending} className="h-11">
-          <Brain className="h-4 w-4 mr-2" />
-          Reason
-        </Button>
+    <div className="p-6 lg:p-8 space-y-6">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-2">
+        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
+          <Brain className="h-8 w-8 text-primary" />
+          Knowledge
+        </h1>
+        <p className="text-muted-foreground">Ask questions and get answers grounded in your documents.</p>
+      </motion.div>
+
+      <div className="relative">
+        <div className="flex gap-3">
+          <div className="relative flex-1">
+            <Input
+              value={question}
+              onChange={(e) => setQuestion(e.target.value)}
+              placeholder="Ask a question..."
+              className="h-12 pr-4 text-base rounded-xl"
+              onKeyDown={(e) => e.key === "Enter" && handleAsk()}
+            />
+          </div>
+          <Button
+            onClick={handleAsk}
+            disabled={!question.trim() || mutation.isPending}
+            className="h-12 px-6 rounded-xl gap-2"
+          >
+            {mutation.isPending ? (
+              <Sparkles className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
+            Ask
+          </Button>
+        </div>
+
+        {!hasResult && !mutation.isPending && !mutation.isError && (
+          <div className="flex flex-wrap gap-2 mt-4">
+            {suggestionQuestions.map((q) => (
+              <button
+                key={q}
+                onClick={() => setQuestion(q)}
+                className="text-xs px-3 py-1.5 rounded-full bg-muted hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {q}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {mutation.isPending && (
-        <Card>
-          <CardContent className="p-6 text-center text-muted-foreground">
-            <Sparkles className="h-8 w-8 mx-auto mb-2 animate-pulse" />
-            <p>Reasoning across knowledge...</p>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+          <Card className="border-0 shadow-sm bg-gradient-to-br from-primary/5 to-transparent">
+            <CardContent className="p-8 text-center">
+              <div className="inline-flex rounded-xl bg-primary/10 p-3 mb-4">
+                <Sparkles className="h-6 w-6 text-primary animate-pulse" />
+              </div>
+              <p className="font-medium">Searching your knowledge...</p>
+              <p className="text-sm text-muted-foreground mt-1">Analyzing documents and generating answer</p>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
+      {mutation.isError && (
+        <Card className="border-0 shadow-sm border-destructive/20 bg-destructive/5">
+          <CardContent className="p-6 text-center">
+            <p className="text-destructive font-medium">Failed to get answer</p>
+            <p className="text-sm text-muted-foreground mt-1">Please try again or rephrase your question.</p>
           </CardContent>
         </Card>
       )}
 
-      {answer && !mutation.isPending && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Brain className="h-5 w-5 text-primary" />
-                Answer
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="prose prose-sm dark:prose-invert max-w-none">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{answer}</ReactMarkdown>
+      {hasResult && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="space-y-6"
+        >
+          <Card className="border-0 shadow-md bg-gradient-to-br from-primary/5 to-transparent">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="rounded-lg bg-primary/10 p-2">
+                  <Brain className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <p className="font-semibold">Answer</p>
+                  <p className="text-xs text-muted-foreground">Generated from your documents</p>
+                </div>
+              </div>
+              <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed">
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  rehypePlugins={[rehypeHighlight]}
+                >
+                  {result.answer}
+                </ReactMarkdown>
               </div>
 
-              {citations.length > 0 && (
-                <div className="border-t pt-3">
-                  <p className="text-sm font-medium mb-2 flex items-center gap-2">
-                    <Quote className="h-4 w-4 text-muted-foreground" />
-                    Citations
+              {result.citations && result.citations.length > 0 && (
+                <div className="mt-6 pt-4 border-t">
+                  <p className="text-sm font-medium mb-3 flex items-center gap-2">
+                    <BookOpen className="h-4 w-4 text-muted-foreground" />
+                    Sources
                   </p>
-                  <div className="flex flex-wrap gap-2">
-                    {citations.map((c, i) => (
-                      <Badge key={i} variant="secondary" className="text-xs">
-                        {c.replace(/[\[\]]/g, "").length > 50
-                          ? c.replace(/[\[\]]/g, "").slice(0, 50) + "…"
-                          : c.replace(/[\[\]]/g, "")}
-                      </Badge>
+                  <div className="space-y-2">
+                    {result.citations.map((c, i) => (
+                      <div key={i} className="flex items-start gap-2 rounded-lg bg-muted/50 p-2.5">
+                        <FileText className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                        <span className="text-sm text-muted-foreground">{c.replace(/[\[\]]/g, "")}</span>
+                      </div>
                     ))}
                   </div>
                 </div>
               )}
             </CardContent>
           </Card>
+
+          {sources.length > 0 && (
+            <Card className="border-0 shadow-sm">
+              <CardContent className="p-6">
+                <p className="text-sm font-medium mb-3 flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  Related Documents
+                </p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {sources.map((source, i) => (
+                    <div key={i} className="flex items-start gap-3 rounded-lg border p-3 hover:bg-accent/50 transition-colors">
+                      <div className="rounded-lg bg-blue-500/10 p-2">
+                        <FileText className="h-4 w-4 text-blue-500" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{source.title || "Untitled"}</p>
+                        {source.sections && source.sections.length > 0 && (
+                          <p className="text-xs text-muted-foreground mt-0.5">{source.sections.join(", ")}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          <div className="flex justify-center">
+            <Button
+              variant="outline"
+              onClick={() => { setQuestion(""); mutation.reset() }}
+              className="rounded-full gap-2"
+            >
+              <ArrowRight className="h-4 w-4" />
+              Ask another question
+            </Button>
+          </div>
         </motion.div>
+      )}
+
+      {!hasResult && !mutation.isPending && !mutation.isError && (
+        <Card className="border-0 shadow-sm bg-gradient-to-br from-muted/50 to-transparent">
+          <CardContent className="p-12 text-center">
+            <div className="inline-flex rounded-xl bg-primary/5 p-4 mb-4">
+              <Lightbulb className="h-10 w-10 text-primary opacity-60" />
+            </div>
+            <p className="font-medium text-lg">Ask anything about your documents</p>
+            <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto">
+              I&apos;ll search your knowledge base and provide answers with sources.
+            </p>
+          </CardContent>
+        </Card>
       )}
     </div>
   )

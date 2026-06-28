@@ -1,16 +1,18 @@
 "use client"
 
 import { useTheme } from "next-themes"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Settings, Moon, Sun, Monitor, Brain, Database, MessageSquare, Globe, User } from "lucide-react"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { Settings, Moon, Sun, Monitor, Globe, Code2, User, Bell, Palette } from "lucide-react"
 import { useUiStore } from "@/store/ui-store"
+import { useDeveloperStore } from "@/stores/developer-store"
+import { Switch } from "@/components/ui/switch"
 import { toast } from "@/components/ui/toast"
+import { motion } from "framer-motion"
 
 function SettingRow({ label, description, children }: { label: string; description?: string; children: React.ReactNode }) {
   return (
@@ -24,26 +26,11 @@ function SettingRow({ label, description, children }: { label: string; descripti
   )
 }
 
-function SectionHeader({ icon: Icon, title, description }: { icon: React.ElementType; title: string; description?: string }) {
-  return (
-    <div className="flex items-center gap-3 mb-4">
-      <div className="rounded-lg bg-primary/10 p-2">
-        <Icon className="h-5 w-5 text-primary" />
-      </div>
-      <div>
-        <h3 className="font-semibold">{title}</h3>
-        {description && <p className="text-xs text-muted-foreground">{description}</p>}
-      </div>
-    </div>
-  )
-}
-
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme()
   const { selectedWorkspace, setSelectedWorkspace } = useUiStore()
-  const [mounted, setMounted] = useState(false)
+  const { developerMode, toggleDeveloperMode } = useDeveloperStore()
   const [workspace, setWorkspace] = useState(selectedWorkspace)
-  useEffect(() => setMounted(true), [])
 
   function handleSave() {
     setSelectedWorkspace(workspace)
@@ -52,94 +39,118 @@ export default function SettingsPage() {
 
   return (
     <div className="p-6 lg:p-8 space-y-6 max-w-3xl">
-      <div className="space-y-1">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-1">
         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
           <Settings className="h-8 w-8 text-primary" />
           Settings
         </h1>
-        <p className="text-muted-foreground">Configure your HearMe AI experience.</p>
-      </div>
+        <p className="text-muted-foreground">Manage your preferences and configuration.</p>
+      </motion.div>
 
-      <Card>
-        <CardHeader>
-          <SectionHeader icon={Monitor} title="Appearance" />
-        </CardHeader>
-        <CardContent>
-          <SettingRow label="Theme" description="Choose your preferred color scheme">
-            <div className="flex gap-2">
-              {[
-                { value: "light", icon: Sun, label: "Light" },
-                { value: "dark", icon: Moon, label: "Dark" },
-                { value: "system", icon: Monitor, label: "System" },
-              ].map(({ value, icon: Icon, label }) => (
-                <Button
-                  key={value}
-                  variant={theme === value ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setTheme(value)}
-                  className="flex-1"
-                >
-                  <Icon className="h-4 w-4 mr-1.5" />
-                  {label}
-                </Button>
-              ))}
-            </div>
-          </SettingRow>
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="general">
+        <TabsList className="w-full justify-start">
+          <TabsTrigger value="general" className="gap-2">
+            <User className="h-4 w-4" /> General
+          </TabsTrigger>
+          <TabsTrigger value="appearance" className="gap-2">
+            <Palette className="h-4 w-4" /> Appearance
+          </TabsTrigger>
+          <TabsTrigger value="developer" className="gap-2">
+            <Code2 className="h-4 w-4" /> Developer
+          </TabsTrigger>
+        </TabsList>
 
-      <Card>
-        <CardHeader>
-          <SectionHeader icon={Globe} title="Workspace" description="Manage your workspace settings" />
-        </CardHeader>
-        <CardContent>
-          <SettingRow label="Workspace ID" description="Scope documents and memories to this workspace">
-            <Input value={workspace} onChange={(e) => setWorkspace(e.target.value)} />
-          </SettingRow>
-          <Button onClick={handleSave} className="mt-4">Save Changes</Button>
-        </CardContent>
-      </Card>
+        <TabsContent value="general" className="mt-6 space-y-6">
+          <Card className="border-0 shadow-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Globe className="h-5 w-5 text-primary" />
+                Workspace
+              </CardTitle>
+              <CardDescription>Manage your workspace configuration.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <SettingRow label="Workspace ID" description="Scope documents and memories to this workspace">
+                <Input value={workspace} onChange={(e) => setWorkspace(e.target.value)} />
+              </SettingRow>
+              <Button onClick={handleSave} className="mt-2">Save Changes</Button>
+            </CardContent>
+          </Card>
 
-      <Card>
-        <CardHeader>
-          <SectionHeader icon={Brain} title="Knowledge Reasoning" />
-        </CardHeader>
-        <CardContent>
-          <SettingRow label="Search Engine" description="Hybrid semantic + keyword search (configured on backend)">
-            <Badge variant="secondary" className="w-full justify-center py-1.5">BM25 + Vector</Badge>
-          </SettingRow>
-          <Separator />
-          <SettingRow label="Reasoning Mode" description="RAG pipeline with citations and guardrails">
-            <Badge variant="secondary" className="w-full justify-center py-1.5">Active</Badge>
-          </SettingRow>
-        </CardContent>
-      </Card>
+          <Card className="border-0 shadow-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Bell className="h-5 w-5 text-primary" />
+                Notifications
+              </CardTitle>
+              <CardDescription>Manage your notification preferences.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <SettingRow label="Upload Notifications" description="Get notified when document processing completes">
+                <Switch checked={true} onCheckedChange={() => toast({ title: "Setting saved" })} />
+              </SettingRow>
+              <Separator />
+              <SettingRow label="Memory Updates" description="Notify me when new memories are created">
+                <Switch checked={false} onCheckedChange={() => toast({ title: "Setting saved" })} />
+              </SettingRow>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      <Card>
-        <CardHeader>
-          <SectionHeader icon={Database} title="Memory System" />
-        </CardHeader>
-        <CardContent>
-          <SettingRow label="Memory Storage" description="Persisted to JSON files">
-            <Badge variant="secondary" className="w-full justify-center py-1.5">Active</Badge>
-          </SettingRow>
-          <Separator />
-          <SettingRow label="Consolidation" description="Automatic merging of related memories">
-            <Badge variant="secondary" className="w-full justify-center py-1.5">Manual</Badge>
-          </SettingRow>
-        </CardContent>
-      </Card>
+        <TabsContent value="appearance" className="mt-6 space-y-6">
+          <Card className="border-0 shadow-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Palette className="h-5 w-5 text-primary" />
+                Appearance
+              </CardTitle>
+              <CardDescription>Customize how HearMe AI looks.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <SettingRow label="Theme" description="Choose your preferred color scheme">
+                <div className="flex gap-2">
+                  {[
+                    { value: "light", icon: Sun, label: "Light" },
+                    { value: "dark", icon: Moon, label: "Dark" },
+                    { value: "system", icon: Monitor, label: "System" },
+                  ].map(({ value, icon: Icon, label }) => (
+                    <Button
+                      key={value}
+                      variant={theme === value ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setTheme(value)}
+                      className="flex-1"
+                    >
+                      <Icon className="h-4 w-4 mr-1.5" />
+                      {label}
+                    </Button>
+                  ))}
+                </div>
+              </SettingRow>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      <Card>
-        <CardHeader>
-          <SectionHeader icon={MessageSquare} title="About" />
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm text-muted-foreground">
-          <p><strong>HearMe AI</strong> v1.0.0</p>
-          <p>AI-powered knowledge platform with sentiment analysis, hybrid search, knowledge reasoning, and long-term memory.</p>
-          <p>Backend: FastAPI &bull; Frontend: Next.js 15 &bull; AI: Groq LLM + Sentence Transformers</p>
-        </CardContent>
-      </Card>
+        <TabsContent value="developer" className="mt-6 space-y-6">
+          <Card className="border-0 shadow-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Code2 className="h-5 w-5 text-amber-500" />
+                Developer Mode
+              </CardTitle>
+              <CardDescription>Access developer tools and diagnostics.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <SettingRow label="Developer Mode" description="Show developer sidebar and tools">
+                <div className="flex items-center justify-end gap-3">
+                  <span className="text-xs text-muted-foreground">{developerMode ? "ON" : "OFF"}</span>
+                  <Switch checked={developerMode} onCheckedChange={toggleDeveloperMode} />
+                </div>
+              </SettingRow>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

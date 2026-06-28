@@ -6,6 +6,7 @@ from ..schemas.document import (
     DocumentListResponse,
     DocumentListItem,
     DocumentMetadata,
+    DocumentStatus,
     DeleteResponse,
     ExtractionResponse,
     ContentResponse,
@@ -257,6 +258,7 @@ async def embed_document(document_id: str):
             "/documents/{id}/embed success: chunks=%d, dimension=%d, model=%s",
             document_id, len(result["chunks"]), result["dimension"], result["embedding_model"],
         )
+        doc_service.update_status(document_id, DocumentStatus.embedded)
         return EmbeddingResponse(
             status="embedded",
             chunks=len(result["chunks"]),
@@ -331,6 +333,7 @@ async def index_document(document_id: str):
             "/documents/{id}/index success: vectors=%d, collection=%s",
             document_id, result["vectors"], result["collection"],
         )
+        doc_service.update_status(document_id, DocumentStatus.indexed)
         return IndexResponse(
             status=result["status"],
             vectors=result["vectors"],
@@ -362,6 +365,7 @@ async def deindex_document(document_id: str):
             "/documents/{id}/index DELETE success: vectors_removed=%d",
             document_id, result["vectors_removed"],
         )
+        doc_service.update_status(document_id, DocumentStatus.chunked)
         return DeindexResponse(
             status=result["status"],
             document_id=result["document_id"],

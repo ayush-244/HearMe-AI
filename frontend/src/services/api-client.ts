@@ -49,10 +49,15 @@ export const api = {
     }),
 
   // Documents
-  uploadDocument: (file: File) => {
+  uploadDocument: async (file: File) => {
     const form = new FormData()
     form.append("file", file)
-    return fetch(`${API_BASE}/documents/upload`, { method: "POST", body: form }).then((r) => r.json())
+    const res = await fetch(`${API_BASE}/documents/upload`, { method: "POST", body: form })
+    if (!res.ok) {
+      const text = await res.text().catch(() => "Upload failed")
+      throw new ApiError(res.status, text)
+    }
+    return res.json()
   },
 
   getDocuments: () => request<{ documents: Document[]; count: number }>("/documents"),
@@ -74,7 +79,7 @@ export const api = {
     request<Record<string, unknown>>(`/documents/${id}/embed`, { method: "POST" }),
 
   indexDocument: (id: string) =>
-    request<{ document_id: string; chunks_indexed: number; status: string }>(`/documents/${id}/index`, { method: "POST" }),
+    request<{ status: string; vectors: number; collection: string }>(`/documents/${id}/index`, { method: "POST" }),
 
   deindexDocument: (id: string) =>
     request<{ status: string }>(`/documents/${id}/index`, { method: "DELETE" }),
