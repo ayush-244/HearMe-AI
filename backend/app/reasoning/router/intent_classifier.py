@@ -151,10 +151,16 @@ class IntentClassifier:
         for pattern in FOLLOW_UP_PATTERNS:
             if pattern.match(q_lower):
                 return True
-        if len(q_lower.split()) <= SHORT_QUERY_THRESHOLD and state.last_assistant_response:
-            short_queries = {"what", "why", "how", "when", "where", "explain", "more", "and", "so", "then", "elaborate", "continue"}
-            first_word = q_lower.split()[0] if q_lower.split() else ""
-            if first_word in short_queries:
+        # Short queries (≤4 words) when there's previous context
+        words = q_lower.split()
+        if len(words) <= 4 and state.last_assistant_response:
+            short_queries = {
+                "what", "why", "how", "when", "where", "explain", "more",
+                "and", "so", "then", "elaborate", "continue", "example",
+                "examples", "really", "like", "tell", "show", "give",
+                "again", "different", "another", "next", "also",
+            }
+            if words and words[0] in short_queries:
                 return True
         return False
 

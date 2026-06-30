@@ -1,0 +1,20 @@
+[
+  {
+    "memory_id": "57b6661a-e69c-43ce-967f-97b32dc80f7e",
+    "user_id": "",
+    "workspace_id": "default",
+    "type": "semantic",
+    "content": "i am Ayush",
+    "summary": "i am Ayush",
+    "importance": 0.3,
+    "confidence": 0.6,
+    "created_at": "2026-06-30T08:07:32.757870+00:00",
+    "updated_at": "2026-06-30T08:07:32.757870+00:00",
+    "last_accessed": "2026-06-30T08:07:32.757870+00:00",
+    "access_count": 0,
+    "embedding_version": "",
+    "checksum": "9599a704b89d5b5d",
+    "source": "conversation",
+    "pinned": false
+  }
+]

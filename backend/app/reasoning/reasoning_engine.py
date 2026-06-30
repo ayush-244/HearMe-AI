@@ -65,6 +65,14 @@ class ReasoningEngine:
         turn_count = self._get_turn_count(query.conversation_id)
         last_assistant = self._get_last_assistant_response(query.conversation_id)
 
+        logger.info(
+            "[CTX] conv_id=%r turn_count=%d history_msgs=%d last_assistant_snippet=%r",
+            query.conversation_id or "(none)",
+            turn_count,
+            len(conversation_history) if conversation_history else 0,
+            (last_assistant or "")[:80],
+        )
+
         ctx = self._context_manager.get_or_create(query.conversation_id) if query.conversation_id else None
         routed_query = query.question
         if ctx and ctx.last_question:
@@ -73,14 +81,24 @@ class ReasoningEngine:
             )
             if resolved.had_reference:
                 routed_query = resolved.resolved
+                logger.info(
+                    "[REF] Reference resolved: %r -> %r (refs=%s)",
+                    query.question[:60], routed_query[:80], resolved.references,
+                )
 
         intent_result, _ = self._intent_router.route(
             query=routed_query,
             conversation_id=query.conversation_id,
             history=conversation_history,
             last_assistant_response=last_assistant,
-            last_retrieved_chunks=self._last_retrieved_chunks.get(query.conversation_id, []),
+            last_retrieved_chunks=self._last_retrieved_chunks.get(query.conversation_id or "", []),
             turn_count=turn_count,
+        )
+
+        logger.info(
+            "[INTENT] question=%r -> intent=%s conf=%.2f requires_docs=%s requires_mem=%s",
+            routed_query[:60], intent_result.intent.value, intent_result.confidence,
+            intent_result.requires_documents, intent_result.requires_memory,
         )
 
         if ctx and ctx.conversation_summary:
@@ -109,10 +127,11 @@ class ReasoningEngine:
 
         if should_search:
             retrieval_start = time.time()
+            logger.info("[SEARCH] Searching docs with query: %r", routed_query[:80])
             try:
                 search_result = self._search_engine.search(
                     SearchQuery(
-                        text=query.question,
+                        text=routed_query,
                         workspace_id=query.workspace_id,
                         top_k=query.top_k,
                         min_score=query.min_score,
@@ -222,9 +241,17 @@ class ReasoningEngine:
         intent_requires_history = intent_result.intent not in IGNORE_HISTORY_INTENTS
         history_for_prompt = conversation_history if intent_requires_history else None
 
+        logger.info(
+            "[PROMPT] Building prompt: intent=%s resolved_q=%r history_turns=%d chunks=%d mem=%d",
+            intent_result.intent.value, routed_query[:60],
+            len(history_for_prompt) if history_for_prompt else 0,
+            len(context["chunks"]) if context else 0,
+            len(memory_context) if memory_context else 0,
+        )
+
         prompt = self._prompt_builder.build(
             context=context,
-            question=query.question,
+            question=routed_query,
             conversation_history=history_for_prompt,
             language=query.language or "en",
             allow_external_knowledge=allow_external,
@@ -268,6 +295,12 @@ class ReasoningEngine:
                 intent=intent_result.intent.value if intent_result else None,
                 chunks=context["chunks"] if context else None,
             )
+
+        logger.info(
+            "[DONE] conv=%r intent=%s chunks=%d gap=%s answer_snippet=%r",
+            query.conversation_id or "(none)", intent_result.intent.value,
+            chunk_count, knowledge_gap, answer_text[:100],
+        )
 
         logger.info(
             "Reasoning complete: intent=%s, conf=%.2f, question='%s', "

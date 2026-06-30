@@ -57,14 +57,19 @@ GENERAL_AI_PATTERNS: List[Pattern] = [
 
 FOLLOW_UP_PATTERNS: List[Pattern] = [
     re.compile(r"^(explain\s+more|tell\s+me\s+more|continue|go\s+on|keep\s+going|elaborate|expand)\b", re.IGNORECASE),
-    re.compile(r"^(can\s+you\s+(elaborate|expand|clarify|simplify|explain\s+that))\b", re.IGNORECASE),
+    re.compile(r"^(can\s+you\s+(elaborate|expand|clarify|simplify|explain\s+that|give\s+(an?\s+)?example))\b", re.IGNORECASE),
+    re.compile(r"^(give\s+(me\s+)?(an?\s+)?example|show\s+(me\s+)?(an?\s+)?example)\b", re.IGNORECASE),
     re.compile(r"^(what\s+about|how\s+about)\s+(that|this|it|the\s+rest)\s*\?*$", re.IGNORECASE),
     re.compile(r"^(and\s+then\?|so\?|then\?)$", re.IGNORECASE),
     re.compile(r"^(i\s+see|makes\s+sense|interesting)\s*,?\s*(but|and|so)\b", re.IGNORECASE),
-    re.compile(r"\b(simplify|simplified|simpler|easier|dumb\s+it\s+down)\b", re.IGNORECASE),
+    re.compile(r"\b(simplify|simplified|simpler|easier|dumb\s+it\s+down|explain\s+(that|it)\s+like)\b", re.IGNORECASE),
     re.compile(r"^(what\s+does\s+that\s+mean|what\s+do\s+you\s+mean)\b", re.IGNORECASE),
     re.compile(r"\b(what\s+else|anything\s+else|more\s+details|further)\b", re.IGNORECASE),
     re.compile(r"^(can\s+you\s+(repeat|say\s+that\s+again))\b", re.IGNORECASE),
+    re.compile(r"^(how\s+is\s+it|how\s+does\s+it)\s+(different|compare|related|work)\b", re.IGNORECASE),
+    re.compile(r"^(tell\s+me\s+more\s+about)\b", re.IGNORECASE),
+    re.compile(r"^(what\s+else\s+do\s+you\s+know)\b", re.IGNORECASE),
+    re.compile(r"\b(like\s+i'?m?\s+\d+|like\s+i\s+am\s+\d+|for\s+a\s+\d+\s+year\s+old|eli5|layman)\b", re.IGNORECASE),
 ]
 
 SHORT_QUERY_THRESHOLD = 3

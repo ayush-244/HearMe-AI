@@ -223,26 +223,26 @@ function ChatPageInner() {
   }
 
   const knowledgeMutation = useMutation({
-    mutationFn: async (text: string) => {
+    mutationFn: async ({ text, cid }: { text: string; cid: string }) => {
       const docIds = attachedFiles.map((f) => f.document_id)
       return api.knowledgeQuery({
         question: text,
+        conversation_id: cid,
         top_k: 5,
         document_ids: docIds.length > 0 ? docIds : undefined,
       })
     },
-    onSuccess: async (result, variables) => {
+    onSuccess: async (result, { text, cid }) => {
       setIsPending(true)
       try {
-        const cid = await ensureConversation()
-        await addMsg.mutateAsync({ convId: cid, role: "user", content: variables })
+        await addMsg.mutateAsync({ convId: cid, role: "user", content: text })
         await addMsg.mutateAsync({
           convId: cid,
           role: "assistant",
           content: result.answer,
           citations: result.citations,
         })
-        api.extractMemory({ user_text: variables, assistant_text: result.answer })
+        api.extractMemory({ user_text: text, assistant_text: result.answer })
           .then(() => queryClient.invalidateQueries({ queryKey: ["memories"] }))
           .catch(() => {})
       } catch {
@@ -275,7 +275,7 @@ function ChatPageInner() {
     } catch {}
 
     streamQuery(
-      { question: text, top_k: 5, document_ids: attachedFiles.length > 0 ? attachedFiles.map((f) => f.document_id) : undefined },
+      { question: text, conversation_id: cid, top_k: 5, document_ids: attachedFiles.length > 0 ? attachedFiles.map((f) => f.document_id) : undefined },
       {
         onToken: (token) => {
           setStreamMessages((prev) =>

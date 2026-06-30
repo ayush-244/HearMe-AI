@@ -1,0 +1,114 @@
+[
+  {
+    "id": "57b65263-0ba1-424c-a70c-44a8fbceb980",
+    "conversation_id": "3070aaaa-ec34-471f-9f0c-1eeb4858eb4a",
+    "role": "user",
+    "content": "hii",
+    "citations": [],
+    "timestamp": "2026-06-30T08:07:08.933785"
+  },
+  {
+    "id": "ced76372-f473-4e75-b5bc-b3d6e6b8c5ef",
+    "conversation_id": "3070aaaa-ec34-471f-9f0c-1eeb4858eb4a",
+    "role": "assistant",
+    "content": "Hello. It's nice to meet you. Is there something I can help you with or would you like to chat?",
+    "citations": [],
+    "timestamp": "2026-06-30T08:07:10.076720"
+  },
+  {
+    "id": "5969c12c-55b6-4f5e-8901-a20ea5be9ad9",
+    "conversation_id": "3070aaaa-ec34-471f-9f0c-1eeb4858eb4a",
+    "role": "user",
+    "content": "who do u know about me",
+    "citations": [],
+    "timestamp": "2026-06-30T08:07:21.130465"
+  },
+  {
+    "id": "a0ff28d0-db21-4854-907d-aa0252357a8e",
+    "conversation_id": "3070aaaa-ec34-471f-9f0c-1eeb4858eb4a",
+    "role": "assistant",
+    "content": "Honestly, I don't know anything about you. This is the beginning of our conversation, and I haven't received any personal context or information about you yet.",
+    "citations": [],
+    "timestamp": "2026-06-30T08:07:21.519438"
+  },
+  {
+    "id": "ad7b349a-8d9e-49bb-9f33-0132dfe74b57",
+    "conversation_id": "3070aaaa-ec34-471f-9f0c-1eeb4858eb4a",
+    "role": "user",
+    "content": "i am Ayush",
+    "citations": [],
+    "timestamp": "2026-06-30T08:07:32.280645"
+  },
+  {
+    "id": "9668f764-2630-4513-be46-6d2ca2f7aa5c",
+    "conversation_id": "3070aaaa-ec34-471f-9f0c-1eeb4858eb4a",
+    "role": "assistant",
+    "content": "Hello Ayush, it's nice to meet you. Is there something I can help you with or would you like to chat? I'm here to provide information, answer questions, or just have a conversation. What's on your mind?",
+    "citations": [],
+    "timestamp": "2026-06-30T08:07:32.738355"
+  },
+  {
+    "id": "ae6c7923-b4a0-430a-9960-807684937dbc",
+    "conversation_id": "3070aaaa-ec34-471f-9f0c-1eeb4858eb4a",
+    "role": "user",
+    "content": "How are you?",
+    "citations": [],
+    "timestamp": "2026-06-30T08:08:03.366126"
+  },
+  {
+    "id": "288dbd8c-00db-488c-bffa-a11ba43e68de",
+    "conversation_id": "3070aaaa-ec34-471f-9f0c-1eeb4858eb4a",
+    "role": "assistant",
+    "content": "I'm doing great, thanks for asking. It's always nice to chat with someone new. I don't have feelings like humans do, but I'm functioning properly and ready to help with any questions or topics you'd like to discuss. How about you? How's your day going so far?",
+    "citations": [],
+    "timestamp": "2026-06-30T08:08:03.822222"
+  },
+  {
+    "id": "5d29aca4-c51f-4692-b00e-5fde392f50e9",
+    "conversation_id": "3070aaaa-ec34-471f-9f0c-1eeb4858eb4a",
+    "role": "user",
+    "content": "Explain FastAPI.",
+    "citations": [],
+    "timestamp": "2026-06-30T08:08:17.047272"
+  },
+  {
+    "id": "82b88342-69c0-4dd6-b4e2-0a5c7857a5f7",
+    "conversation_id": "3070aaaa-ec34-471f-9f0c-1eeb4858eb4a",
+    "role": "assistant",
+    "content": "FastAPI is a modern, fast (high-performance), web framework for building APIs with Python 3.7+ based on standard Python type hints. It's designed to be fast, scalable, and easy to use, with a strong focus on automatic interactive API documentation.\n\nKey Features of FastAPI:\n\n1. **Speed**: FastAPI is built on top of standard Python type hints using ASGI (Asynchronous Server Gateway Interface) and Starlette, which makes it one of the fastest Python frameworks available.\n2. **Automatic API Documentation**: FastAPI automatically generates interactive API documentation, including support for OpenAPI and Swagger UI, making it easy to visualize and test your API.\n3. **Strongly Typed**: FastAPI uses Python type hints to define the structure of your API, which helps catch errors early and improve code maintainability.\n4. **Asynchronous**: FastAPI supports asynchronous programming, which allows your application to handle multiple requests concurrently, improving performance and scalability.\n5. **Robust Error Handling**: FastAPI includes built-in support for error handling, including automatic error handling and custom error handling mechanisms.\n6. **Extensive Libraries and Tools**: FastAPI has a growing ecosystem of libraries and tools, including support for databases, authentication, and more.\n\nUse Cases for FastAPI:\n\n1. **Building RESTful APIs**: FastAPI is well-suited for building RESTful APIs, with support for automatic API documentation and strongly typed definitions.\n2. **Real-time Data Applications**: FastAPI's asynchronous capabilities make it a good fit for real-time data applications, such as live updates, WebSockets, and WebRTC.\n3. **Microservices Architecture**: FastAPI can be used to build individual microservices, with its lightweight and scalable design making it a good fit for containerized environments.\n4. **Machine Learning and Data Science**: FastAPI can be used to build APIs for machine learning and data science applications, with support for libraries like TensorFlow and PyTorch.\n\nOverall, FastAPI is a powerful and flexible framework for building high-performance APIs with Python, with a strong focus on ease of use, scalability, and maintainability.",
+    "citations": [],
+    "timestamp": "2026-06-30T08:08:18.981673"
+  },
+  {
+    "id": "7c18102d-c81a-4faf-a117-cef63d46de6e",
+    "conversation_id": "3070aaaa-ec34-471f-9f0c-1eeb4858eb4a",
+    "role": "user",
+    "content": "Write a 500 word article on AI.",
+    "citations": [],
+    "timestamp": "2026-06-30T08:08:33.014374"
+  },
+  {
+    "id": "d9ba73b7-55b9-4611-bf8d-d31d13598b6e",
+    "conversation_id": "3070aaaa-ec34-471f-9f0c-1eeb4858eb4a",
+    "role": "assistant",
+    "content": "Artificial Intelligence (AI) has revolutionized the way we live, work, and interact with one another. From virtual assistants like Siri and Alexa to self-driving cars and personalized product recommendations, AI is increasingly becoming an integral part of our daily lives. But what exactly is AI, and how does it work?\n\nAt its core, AI refers to the development of computer systems that can perform tasks that typically require human intelligence, such as learning, problem-solving, and decision-making. These systems use algorithms and data to make predictions, classify objects, and generate insights, often with a high degree of accuracy. AI systems can be broadly categorized into two types: narrow or weak AI, and general or strong AI. Narrow AI is designed to perform a specific task, such as facial recognition or language translation, whereas general AI aims to mimic human intelligence and can perform a wide range of tasks.\n\nOne of the key drivers of AI's rapid progress is the availability of vast amounts of data. With the rise of the internet, social media, and the Internet of Things (IoT), we are generating more data than ever before. AI systems can analyze this data, identify patterns, and learn from it, enabling them to improve their performance over time. Machine learning, a subset of AI, is a key technique used to train AI systems on large datasets. By using machine learning, AI systems can learn to recognize images, speech, and text, and make predictions based on that data.\n\nAI has numerous applications across various industries, including healthcare, finance, transportation, and education. In healthcare, AI can help diagnose diseases more accurately and quickly, develop personalized treatment plans, and streamline clinical workflows. In finance, AI can detect fraudulent transactions, optimize investment portfolios, and provide personalized financial advice. Self-driving cars, which rely on AI to navigate roads and avoid obstacles, are being tested and deployed in several countries. AI-powered chatbots are also being used in customer service to provide 24/7 support and answer frequently asked questions.\n\nDespite its many benefits, AI also raises important concerns about job displacement, bias, and accountability. As AI systems become more advanced, there is a risk that they could replace human workers, particularly in sectors where tasks are repetitive or can be easily automated. Additionally, AI systems can perpetuate biases and discrimination if they are trained on biased data, which can have serious consequences in areas such as law enforcement and hiring. To mitigate these risks, it is essential to develop AI systems that are transparent, explainable, and fair, and to ensure that they are designed and deployed in ways that benefit society as a whole.\n\nIn conclusion, AI is a rapidly evolving field that has the potential to transform many aspects of our lives. From improving healthcare outcomes to enhancing customer experiences, AI can bring numerous benefits and efficiencies. However, it is crucial to address the challenges associated with AI, including job displacement, bias, and accountability, to ensure that its development and deployment are aligned with human values and promote the well-being of all individuals. As AI continues to advance, it is essential to stay informed, engaged, and critical, and to work together to harness its potential for the betterment of society.",
+    "citations": [],
+    "timestamp": "2026-06-30T08:08:34.936085"
+  },
+  {
+    "id": "5f2e6c11-b5ae-4876-b83e-bee15f5b2e58",
+    "conversation_id": "3070aaaa-ec34-471f-9f0c-1eeb4858eb4a",
+    "role": "user",
+    "content": "Explain more.",
+    "citations": [],
+    "timestamp": "2026-06-30T08:08:47.304555"
+  },
+  {
+    "id": "be692f9e-183f-4e8f-9fa5-2627042a73f8",
+    "conversation_id": "3070aaaa-ec34-471f-9f0c-1eeb4858eb4a",
+    "role": "assistant",
+    "content": "It seems there's no specific topic or question provided for me to explain. Could you please provide more context or clarify what you would like me to explain? I'll do my best to provide a clear, accurate, and educational response using my general knowledge.",
+    "citations": [],
+    "timestamp": "2026-06-30T08:08:47.779004"
+  }
+]
