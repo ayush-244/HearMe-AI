@@ -13,6 +13,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { ReasoningStages } from "@/components/chat/ReasoningStages"
+import { EmptyConversation } from "@/components/chat/EmptyConversation"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import rehypeHighlight from "rehype-highlight"
@@ -420,46 +421,19 @@ function ChatPageInner() {
     }
   }
 
-  const showWelcome = !convId && !convLoading && streamMessages.length === 0
+  const showEmpty = !convLoading && streamMessages.length === 0
 
   return (
     <div className="flex h-[calc(100vh-3.5rem)] flex-col">
       <div ref={containerRef} className="flex-1 overflow-y-auto px-4 lg:px-8">
         <div className="mx-auto max-w-3xl py-6 space-y-6">
-          {showWelcome && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-center py-16 space-y-6"
-            >
-              <div className="inline-flex rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 p-4">
-                <Sparkles className="h-16 w-16 text-primary" />
-              </div>
-              <div className="space-y-2">
-                <h1 className="text-4xl font-bold">How can I help you?</h1>
-                <p className="text-muted-foreground max-w-lg mx-auto text-lg">
-                  Ask me anything about your documents — I&apos;ll search, analyze, and answer with sources.
-                </p>
-              </div>
-              <div className="flex flex-wrap justify-center gap-2">
-                {[
-                  "Summarize my documents",
-                  "What are the key topics?",
-                  "Find insights across files",
-                  "Analyze this for me",
-                ].map((p) => (
-                  <Button
-                    key={p}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => { setInput(p); inputRef.current?.focus() }}
-                    className="rounded-full text-sm"
-                  >
-                    {p}
-                  </Button>
-                ))}
-              </div>
-            </motion.div>
+          {showEmpty && (
+            <EmptyConversation 
+              onSelect={(text) => {
+                setInput(text)
+                inputRef.current?.focus()
+              }} 
+            />
           )}
 
           {convLoading && (

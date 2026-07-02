@@ -1,0 +1,18 @@
+[
+  {
+    "id": "79573ace-697e-4653-82ec-a6dee35b6ae8",
+    "conversation_id": "b9be03c9-e52a-4446-a457-6c324dd24f39",
+    "role": "user",
+    "content": "hi",
+    "citations": [],
+    "timestamp": "2026-07-02T19:04:58.883706"
+  },
+  {
+    "id": "375d8e31-eb0b-4bc3-84b9-9a473f3fea3c",
+    "conversation_id": "b9be03c9-e52a-4446-a457-6c324dd24f39",
+    "role": "assistant",
+    "content": "Hello. It's nice to meet you. How can I assist you today?",
+    "citations": [],
+    "timestamp": "2026-07-02T19:04:59.878206"
+  }
+]
