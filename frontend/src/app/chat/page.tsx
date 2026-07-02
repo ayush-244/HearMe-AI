@@ -185,11 +185,21 @@ function ChatPageInner() {
   const { containerRef, showJumpButton, scrollToBottom } = useAutoScroll([streamMessages, isPending])
 
   useEffect(() => {
+    setStreamMessages([])
+  }, [convId])
+
+  useEffect(() => {
     if (convId) {
       setActiveConversation(convId)
       currentConvIdRef.current = convId
     }
   }, [convId, setActiveConversation])
+
+  useEffect(() => {
+    setInput("")
+    setStreamMessages([])
+    setUploadProgress(null)
+  }, [convId])
 
   useEffect(() => {
     if (!convId && activeConversationId) {
@@ -198,7 +208,17 @@ function ChatPageInner() {
   }, [convId, activeConversationId, router])
 
   useEffect(() => {
-    if (streamMessages.length === 0 && dbMessages.length > 0) {
+    if (convId && dbMessages.length > 0) {
+      setStreamMessages(
+        dbMessages.map((m: ChatMessage) => ({
+          id: m.id,
+          role: m.role,
+          content: m.content,
+          citations: m.citations,
+          isStreaming: false,
+        }))
+      )
+    } {
       setStreamMessages(
         dbMessages.map((m: ChatMessage) => ({
           id: m.id,
@@ -244,7 +264,7 @@ function ChatPageInner() {
         })
         api.extractMemory({ user_text: text, assistant_text: result.answer })
           .then(() => queryClient.invalidateQueries({ queryKey: ["memories"] }))
-          .catch(() => {})
+          .catch(() => { })
       } catch {
         toast({ title: "Failed to save message", variant: "destructive" })
       }
@@ -272,7 +292,7 @@ function ChatPageInner() {
 
     try {
       await addMsg.mutateAsync({ convId: cid, role: "user", content: text })
-    } catch {}
+    } catch { }
 
     streamQuery(
       { question: text, conversation_id: cid, top_k: 5, document_ids: attachedFiles.length > 0 ? attachedFiles.map((f) => f.document_id) : undefined },
@@ -300,8 +320,8 @@ function ChatPageInner() {
             })
             api.extractMemory({ user_text: text, assistant_text: result?.answer || "" })
               .then(() => queryClient.invalidateQueries({ queryKey: ["memories"] }))
-              .catch(() => {})
-          } catch {}
+              .catch(() => { })
+          } catch { }
         },
         onError: (message) => {
           setStreamMessages((prev) =>
@@ -344,10 +364,10 @@ function ChatPageInner() {
 
       let targetConvId = convId
       if (!targetConvId) {
-          const conv = await createConv.mutateAsync("")
-          targetConvId = conv.id
-          setActiveConversation(conv.id)
-          router.push(`/chat?id=${conv.id}`, { scroll: false })
+        const conv = await createConv.mutateAsync("")
+        targetConvId = conv.id
+        setActiveConversation(conv.id)
+        router.push(`/chat?id=${conv.id}`, { scroll: false })
       }
 
       await addAttach.mutateAsync({
@@ -391,7 +411,7 @@ function ChatPageInner() {
     try {
       await api.removeAttachment(convId, documentId)
       queryClient.invalidateQueries({ queryKey: ["conversation", convId] })
-    } catch {}
+    } catch { }
   }
 
   function retryUpload() {
