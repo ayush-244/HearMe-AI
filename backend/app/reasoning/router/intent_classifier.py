@@ -146,23 +146,78 @@ class IntentClassifier:
         return False
 
     def _is_follow_up(self, q_lower: str, state: ConversationState) -> bool:
-        if state.turn_count == 0:
+        """
+        Determine whether the current query is a follow-up to the previous turn.
+
+        A follow-up must explicitly refer to the previous discussion.
+        Standalone questions such as "What is AI?" or "Who is Elon Musk?"
+        must always start a new topic.
+        """
+
+        if state.turn_count == 0 or not state.last_assistant_response:
             return False
-        for pattern in FOLLOW_UP_PATTERNS:
-            if pattern.match(q_lower):
-                return True
-        # Short queries (≤4 words) when there's previous context
-        words = q_lower.split()
-        if len(words) <= 4 and state.last_assistant_response:
-            short_queries = {
-                "what", "why", "how", "when", "where", "explain", "more",
-                "and", "so", "then", "elaborate", "continue", "example",
-                "examples", "really", "like", "tell", "show", "give",
-                "again", "different", "another", "next", "also",
-            }
-            if words and words[0] in short_queries:
-                return True
+
+        # Standalone questions always start a new topic
+        standalone_prefixes = (
+            "what is ",
+            "who is ",
+            "what are ",
+            "who are ",
+            "define ",
+            "describe ",
+            "tell me about ",
+            "introduce ",
+        )
+
+        if q_lower.startswith(standalone_prefixes):
+            return False
+
+        # Explicit follow-up phrases
+        followup_prefixes = (
+            "explain more",
+            "tell me more",
+            "continue",
+            "go on",
+            "elaborate",
+            "expand",
+            "give an example",
+            "another example",
+            "can you explain",
+            "can you elaborate",
+            "how does that",
+            "how does it",
+            "why is that",
+            "what about that",
+            "what else",
+            "is that",
+            "does that",
+            "and then",
+            "then what",
+        )
+
+        if any(q_lower.startswith(prefix) for prefix in followup_prefixes):
+            return True
+
+        # Very short pronoun-based references
+        pronoun_queries = {
+            "why",
+            "how",
+            "why?",
+            "how?",
+            "more",
+            "again",
+            "example",
+            "examples",
+            "it",
+            "this",
+            "that",
+        }
+
+        if q_lower.strip() in pronoun_queries:
+            return True
+
         return False
+
 
     def _has_document_reference(self, q_lower: str) -> bool:
         for pattern in DOCUMENT_REFERENCE_PATTERNS:

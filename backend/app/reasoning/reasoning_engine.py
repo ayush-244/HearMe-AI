@@ -15,6 +15,7 @@ from .answer_models import KnowledgeQuery, KnowledgeAnswer, ConversationTurn
 from .router.intent_router import IntentRouter, SIMILARITY_THRESHOLD
 from .router.intent_models import IntentResult, IntentType
 from .conversation.conversation_context import ConversationContextManager
+from .query_rewriter import QueryRewriter, RewriteResult
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +50,8 @@ class ReasoningEngine:
         self._last_retrieved_chunks: Dict[str, List[Dict[str, Any]]] = {}
         self._last_retrieved_context: Dict[str, str] = {}
         self._context_manager = ConversationContextManager()
-        logger.info("ReasoningEngine initialized with IntentRouter and ConversationContextManager")
+        self._query_rewriter = QueryRewriter(self._chat_service)
+        logger.info("ReasoningEngine initialized with IntentRouter, QueryRewriter, and ConversationContextManager")
 
     def answer(self, query: KnowledgeQuery) -> KnowledgeAnswer:
         total_start = time.time()
@@ -85,6 +87,10 @@ class ReasoningEngine:
                     "[REF] Reference resolved: %r -> %r (refs=%s)",
                     query.question[:60], routed_query[:80], resolved.references,
                 )
+
+        # Phase 27.3 - Intelligent Query Rewrite
+        rewrite_result = self._query_rewriter.rewrite(routed_query, conversation_history)
+        routed_query = rewrite_result.rewritten_query
 
         intent_result, _ = self._intent_router.route(
             query=routed_query,
