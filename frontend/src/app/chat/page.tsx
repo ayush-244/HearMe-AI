@@ -180,6 +180,19 @@ function ChatPageInner() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const currentConvIdRef = useRef<string | null>(null)
 
+  // Rotating placeholder
+  const PLACEHOLDERS = ["Ask anything...", "Explain Kubernetes", "Summarize my notes", "What do you remember?", "Compare React vs Vue"]
+  const [placeholderIdx, setPlaceholderIdx] = useState(0)
+  const [placeholderVisible, setPlaceholderVisible] = useState(true)
+  useEffect(() => {
+    if (input) return
+    const id = setInterval(() => {
+      setPlaceholderVisible(false)
+      setTimeout(() => { setPlaceholderIdx((i) => (i + 1) % PLACEHOLDERS.length); setPlaceholderVisible(true) }, 280)
+    }, 3200)
+    return () => clearInterval(id)
+  }, [input])
+
   const dbMessages = useMemo(() => conversation?.messages ?? [], [conversation?.messages])
   const attachedFiles = useMemo(() => conversation?.attached_documents ?? [], [conversation?.attached_documents])
 
@@ -564,9 +577,9 @@ function ChatPageInner() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask anything about your documents..."
+                placeholder={input ? "" : PLACEHOLDERS[placeholderIdx]}
                 rows={1}
-                className="flex w-full rounded-xl border bg-muted/50 px-4 py-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none min-h-[48px] max-h-[200px]"
+                className="flex w-full rounded-xl border bg-muted/50 px-4 py-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none min-h-[48px] max-h-[200px] transition-placeholder"
                 disabled={isStreaming || isPending}
                 style={{ height: "auto" }}
                 onInput={(e) => {
