@@ -54,7 +54,7 @@ class QueryRewriter:
         # Otherwise, assume it's a good enough query
         return False
 
-    def rewrite(self, query: str, history: Optional[List[ConversationTurn]]) -> RewriteResult:
+    def rewrite(self, query: str, last_question: str = "", last_answer: str = "", current_topic: str = "") -> RewriteResult:
         if not self.should_rewrite(query):
             return RewriteResult(
                 original_query=query,
@@ -64,7 +64,7 @@ class QueryRewriter:
                 reason="Query is already clean"
             )
 
-        prompt = self._build_prompt(query, history)
+        prompt = self._build_prompt(query, last_question, last_answer, current_topic)
         
         try:
             llm_response = self._chat_service.invoke_llm(prompt)
@@ -112,22 +112,11 @@ class QueryRewriter:
                 reason=f"Error: {str(e)}"
             )
 
-    def _build_prompt(self, query: str, history: Optional[List[Any]]) -> str:
+    def _build_prompt(self, query: str, last_question: str, last_answer: str, current_topic: str) -> str:
+        topic_text = current_topic if current_topic else "Unknown"
         history_text = "None"
-        if history:
-            history_lines = []
-            for turn in history[-4:]:
-                if isinstance(turn, dict):
-                    role_str = turn.get("role", "")
-                    content = turn.get("content", "")
-                else:
-                    role_str = getattr(turn, "role", "")
-                    content = getattr(turn, "content", "")
-                    
-                role = "User" if role_str == "user" else "Assistant"
-                history_lines.append(f"{role}: {content}")
-            if history_lines:
-                history_text = "\n".join(history_lines)
+        if last_question or last_answer:
+            history_text = f"User: {last_question}\nAssistant: {last_answer}"
 
         return f"""You are HearMe AI's Query Rewriter.
 Your ONLY task is rewriting the user's latest query.
@@ -141,7 +130,8 @@ Rules:
 • Correct grammar.
 • Correct punctuation.
 • Expand abbreviations.
-• Use conversation history when needed (e.g. for follow-ups).
+• Use the active conversation topic and immediate context to rewrite follow-ups into standalone queries.
+• Do not include unrelated past topics. Focus ONLY on the active conversation context.
 • Preserve meaning exactly.
 • Return ONLY a valid JSON object.
 
@@ -153,9 +143,11 @@ Output Format:
   "reason": "spelling / grammar / abbreviation / follow-up / etc."
 }}
 
-Conversation History:
+Active Context:
+Topic: {topic_text}
 {history_text}
 
 User Query:
 {query}
 """
+

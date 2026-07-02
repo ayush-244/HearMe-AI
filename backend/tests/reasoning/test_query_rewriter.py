@@ -2,7 +2,6 @@ import pytest
 import json
 from unittest.mock import MagicMock
 from backend.app.reasoning.query_rewriter import QueryRewriter, RewriteResult
-from backend.app.reasoning.answer_models import ConversationTurn
 from backend.app.services.chat_service import ChatService
 
 @pytest.fixture
@@ -32,7 +31,7 @@ def test_should_not_rewrite_clean_long_query(rewriter):
 
 def test_rewrite_bypassed_if_clean(rewriter, chat_service_mock):
     query = "What is the main concept behind Artificial Intelligence?"
-    result = rewriter.rewrite(query, history=[])
+    result = rewriter.rewrite(query)
     
     assert result.original_query == query
     assert result.rewritten_query == query
@@ -55,7 +54,7 @@ def test_rewrite_invokes_llm_and_parses_json(rewriter, chat_service_mock):
 ```'''
     chat_service_mock.invoke_llm.return_value = mock_json_response
     
-    result = rewriter.rewrite(query, history=[])
+    result = rewriter.rewrite(query)
     
     assert result.original_query == query
     assert result.rewritten_query == "What is Artificial Intelligence?"
@@ -65,12 +64,8 @@ def test_rewrite_invokes_llm_and_parses_json(rewriter, chat_service_mock):
     
     chat_service_mock.invoke_llm.assert_called_once()
 
-def test_rewrite_with_history(rewriter, chat_service_mock):
+def test_rewrite_with_active_context(rewriter, chat_service_mock):
     query = "more"
-    history = [
-        ConversationTurn(role="user", content="What is Artificial Intelligence?"),
-        ConversationTurn(role="assistant", content="AI is a field of computer science...")
-    ]
     
     mock_json_response = '''{
   "rewritten_query": "Tell me more about Artificial Intelligence.",
@@ -80,50 +75,30 @@ def test_rewrite_with_history(rewriter, chat_service_mock):
 }'''
     chat_service_mock.invoke_llm.return_value = mock_json_response
     
-    result = rewriter.rewrite(query, history=history)
+    result = rewriter.rewrite(
+        query=query, 
+        last_question="What is Artificial Intelligence?",
+        last_answer="AI is a field of computer science...",
+        current_topic="Artificial Intelligence"
+    )
     
     assert result.original_query == "more"
     assert result.rewritten_query == "Tell me more about Artificial Intelligence."
     assert result.modified == True
     
-    # Verify prompt contains history
+    # Verify prompt contains single turn active context
     call_args = chat_service_mock.invoke_llm.call_args[0][0]
     assert "User: What is Artificial Intelligence?" in call_args
     assert "Assistant: AI is a field of computer science..." in call_args
+    assert "Topic: Artificial Intelligence" in call_args
 
 def test_rewrite_handles_json_parse_error(rewriter, chat_service_mock):
     query = "waht is ai"
     chat_service_mock.invoke_llm.return_value = "I am an AI, I cannot help with that."
     
-    result = rewriter.rewrite(query, history=[])
+    result = rewriter.rewrite(query)
     
     assert result.original_query == query
     assert result.rewritten_query == query  # Falls back to original
     assert result.modified == False
     assert result.reason == "JSON Parse Error"
-
-def test_rewrite_with_dict_history(rewriter, chat_service_mock):
-    query = "more"
-    history = [
-        {"role": "user", "content": "What is Artificial Intelligence?"},
-        {"role": "assistant", "content": "AI is a field of computer science..."}
-    ]
-    
-    mock_json_response = '''{
-  "rewritten_query": "Tell me more about Artificial Intelligence.",
-  "modified": true,
-  "confidence": 0.95,
-  "reason": "follow-up"
-}'''
-    chat_service_mock.invoke_llm.return_value = mock_json_response
-    
-    result = rewriter.rewrite(query, history=history)
-    
-    assert result.original_query == "more"
-    assert result.rewritten_query == "Tell me more about Artificial Intelligence."
-    assert result.modified == True
-    
-    # Verify prompt contains history correctly parsed from dicts
-    call_args = chat_service_mock.invoke_llm.call_args[0][0]
-    assert "User: What is Artificial Intelligence?" in call_args
-    assert "Assistant: AI is a field of computer science..." in call_args

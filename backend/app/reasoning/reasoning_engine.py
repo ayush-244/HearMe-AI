@@ -89,7 +89,16 @@ class ReasoningEngine:
                 )
 
         # Phase 27.3 - Intelligent Query Rewrite
-        rewrite_result = self._query_rewriter.rewrite(routed_query, conversation_history)
+        last_q = ctx.last_question if ctx else ""
+        last_a = ctx.last_answer if ctx else ""
+        curr_topic = ctx.current_topic if ctx else ""
+        
+        rewrite_result = self._query_rewriter.rewrite(
+            query=routed_query,
+            last_question=last_q,
+            last_answer=last_a,
+            current_topic=curr_topic
+        )
         routed_query = rewrite_result.rewritten_query
 
         intent_result, _ = self._intent_router.route(
