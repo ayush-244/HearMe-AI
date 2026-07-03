@@ -15,6 +15,10 @@ import {
   Activity,
   BookOpen,
 } from "lucide-react"
+import { PageShell } from "@/components/ui/page-shell"
+import { PageHeader } from "@/components/ui/page-header"
+import { FEATURE_ACCENTS, ICON_SIZE } from "@/lib/design-tokens"
+import { cn } from "@/lib/utils"
 import { motion } from "framer-motion"
 
 function formatNumber(n: number) {
@@ -44,31 +48,29 @@ function WeeklyChart({ data }: { data: number[] }) {
   )
 }
 
-function StatCard({ icon: Icon, label, value, sub, color, gradient }: {
+function StatCard({ icon: Icon, label, value, sub, accent }: {
   icon: React.ElementType
   label: string
   value: string | number
   sub?: string
-  color: string
-  gradient: string
+  accent: string
 }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
+      transition={{ duration: 0.2 }}
     >
-      <Card className="border-0 shadow-md overflow-hidden">
-        <div className={`h-1 ${gradient}`} />
+      <Card>
         <CardContent className="p-5">
           <div className="flex items-start justify-between">
             <div className="space-y-1">
-              <p className="text-sm text-muted-foreground">{label}</p>
-              <p className={`text-3xl font-bold ${color}`}>{value}</p>
-              {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
+              <p className="text-caption">{label}</p>
+              <p className="text-3xl font-semibold text-foreground">{value}</p>
+              {sub && <p className="text-caption">{sub}</p>}
             </div>
-            <div className={`rounded-xl ${gradient.replace("from-", "bg-").replace(" to-", "/10")} bg-opacity-10 p-3`}>
-              <Icon className={`h-5 w-5 ${color}`} />
+            <div className="icon-container">
+              <Icon className={cn(ICON_SIZE.lg, accent)} />
             </div>
           </div>
         </CardContent>
@@ -90,14 +92,8 @@ export default function AnalyticsPage() {
   const avgResponseTime = "1.2s"
 
   return (
-    <div className="p-6 lg:p-8 space-y-6">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
-          <BarChart3 className="h-8 w-8 text-primary" />
-          Analytics
-        </h1>
-        <p className="text-muted-foreground">Your usage and activity overview.</p>
-      </motion.div>
+    <PageShell maxWidth="full">
+      <PageHeader title="Analytics" description="Your usage and activity overview." icon={BarChart3} />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {docsLoad || memsLoad ? (
@@ -109,42 +105,38 @@ export default function AnalyticsPage() {
               label="Documents Uploaded"
               value={docCount}
               sub={indexedCount > 0 ? `${indexedCount} indexed` : "No documents yet"}
-              color="text-emerald-500"
-              gradient="from-emerald-500 to-emerald-400"
+              accent={FEATURE_ACCENTS.library}
             />
             <StatCard
               icon={MessageSquare}
               label="Questions Asked"
               value={12}
               sub="Across all sessions"
-              color="text-blue-500"
-              gradient="from-blue-500 to-blue-400"
+              accent={FEATURE_ACCENTS.chat}
             />
             <StatCard
               icon={Brain}
               label="Knowledge Searches"
               value={8}
               sub="Using your documents"
-              color="text-purple-500"
-              gradient="from-purple-500 to-purple-400"
+              accent={FEATURE_ACCENTS.knowledge}
             />
             <StatCard
               icon={Clock}
               label="Avg Response Time"
               value={avgResponseTime}
               sub="Last 30 days"
-              color="text-amber-500"
-              gradient="from-amber-500 to-amber-400"
+              accent={FEATURE_ACCENTS.developer}
             />
           </>
         )}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2 border-0 shadow-md">
+        <Card className="lg:col-span-2">
           <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Activity className="h-5 w-5 text-primary" />
+            <CardTitle className="flex items-center gap-2 text-section-title">
+              <Activity className={cn(ICON_SIZE.lg, "text-muted-foreground")} />
               Weekly Activity
             </CardTitle>
           </CardHeader>
@@ -160,18 +152,18 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-md">
+        <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Calendar className="h-5 w-5 text-primary" />
+            <CardTitle className="flex items-center gap-2 text-section-title">
+              <Calendar className={cn(ICON_SIZE.lg, "text-muted-foreground")} />
               Summary
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-emerald-500/10 p-2">
-                  <FileText className="h-4 w-4 text-emerald-500" />
+                <div className="icon-container">
+                  <FileText className={cn(ICON_SIZE.md, FEATURE_ACCENTS.library)} />
                 </div>
                 <div>
                   <p className="text-sm font-medium">Total Documents</p>
@@ -182,8 +174,8 @@ export default function AnalyticsPage() {
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-purple-500/10 p-2">
-                  <Brain className="h-4 w-4 text-purple-500" />
+                <div className="icon-container">
+                  <Brain className={cn(ICON_SIZE.md, FEATURE_ACCENTS.memory)} />
                 </div>
                 <div>
                   <p className="text-sm font-medium">AI Memories</p>
@@ -194,8 +186,8 @@ export default function AnalyticsPage() {
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-amber-500/10 p-2">
-                  <Clock className="h-4 w-4 text-amber-500" />
+                <div className="icon-container">
+                  <Clock className={cn(ICON_SIZE.md, FEATURE_ACCENTS.developer)} />
                 </div>
                 <div>
                   <p className="text-sm font-medium">Most Active Day</p>
@@ -206,8 +198,8 @@ export default function AnalyticsPage() {
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-blue-500/10 p-2">
-                  <BookOpen className="h-4 w-4 text-blue-500" />
+                <div className="icon-container">
+                  <BookOpen className={cn(ICON_SIZE.md, FEATURE_ACCENTS.chat)} />
                 </div>
                 <div>
                   <p className="text-sm font-medium">Total Storage</p>
@@ -220,25 +212,25 @@ export default function AnalyticsPage() {
         </Card>
       </div>
 
-      <Card className="border-0 shadow-md">
+      <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Activity className="h-5 w-5 text-primary" />
+          <CardTitle className="flex items-center gap-2 text-section-title">
+            <Activity className={cn(ICON_SIZE.lg, "text-muted-foreground")} />
             Recent Activity
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
             {[
-              { action: "Documents Uploaded", count: docCount, icon: FileText, color: "text-emerald-500", bg: "bg-emerald-500/10", time: "All time" },
-              { action: "Memories Stored", count: memCount, icon: Brain, color: "text-purple-500", bg: "bg-purple-500/10", time: "All time" },
-              { action: "Conversations", count: 6, icon: MessageSquare, color: "text-blue-500", bg: "bg-blue-500/10", time: "This session" },
-              { action: "Knowledge Queries", count: 8, icon: BookOpen, color: "text-amber-500", bg: "bg-amber-500/10", time: "Last 30 days" },
+              { action: "Documents Uploaded", count: docCount, icon: FileText, accent: FEATURE_ACCENTS.library, time: "All time" },
+              { action: "Memories Stored", count: memCount, icon: Brain, accent: FEATURE_ACCENTS.memory, time: "All time" },
+              { action: "Conversations", count: 6, icon: MessageSquare, accent: FEATURE_ACCENTS.chat, time: "This session" },
+              { action: "Knowledge Queries", count: 8, icon: BookOpen, accent: FEATURE_ACCENTS.knowledge, time: "Last 30 days" },
             ].map((item, i) => (
-              <div key={i} className="flex items-center justify-between rounded-lg border p-3 hover:bg-accent/50 transition-colors">
+              <div key={i} className="flex items-center justify-between rounded-lg border border-border p-3 hover:bg-accent/50 transition-all duration-200">
                 <div className="flex items-center gap-3">
-                  <div className={`rounded-lg ${item.bg} p-2`}>
-                    <item.icon className={`h-4 w-4 ${item.color}`} />
+                  <div className="icon-container">
+                    <item.icon className={cn(ICON_SIZE.md, item.accent)} />
                   </div>
                   <div>
                     <p className="text-sm font-medium">{item.action}</p>
@@ -251,6 +243,6 @@ export default function AnalyticsPage() {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </PageShell>
   )
 }

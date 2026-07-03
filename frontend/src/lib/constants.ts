@@ -21,10 +21,10 @@ export const DEV_NAV_ITEMS = [
 ] as const
 
 export const MEMORY_TYPE_COLORS: Record<string, string> = {
-  semantic: "text-blue-500",
-  episodic: "text-green-500",
-  preference: "text-purple-500",
-  working: "text-amber-500",
+  semantic: "text-blue-400",
+  episodic: "text-emerald-400",
+  preference: "text-purple-400",
+  working: "text-amber-400",
 }
 
 export const MEMORY_TYPE_LABELS: Record<string, string> = {

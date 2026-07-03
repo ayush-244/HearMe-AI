@@ -12,6 +12,8 @@ import { useUiStore } from "@/store/ui-store"
 import { useDeveloperStore } from "@/stores/developer-store"
 import { Switch } from "@/components/ui/switch"
 import { toast } from "@/components/ui/toast"
+import { PageShell } from "@/components/ui/page-shell"
+import { PageHeader } from "@/components/ui/page-header"
 import { motion } from "framer-motion"
 
 function SettingRow({ label, description, children }: { label: string; description?: string; children: React.ReactNode }) {
@@ -38,13 +40,13 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="p-6 lg:p-8 space-y-6 max-w-3xl">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-1">
-        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
-          <Settings className="h-8 w-8 text-primary" />
-          Settings
-        </h1>
-        <p className="text-muted-foreground">Manage your preferences and configuration.</p>
+    <PageShell maxWidth="narrow">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+        <PageHeader
+          title="Settings"
+          description="Manage your preferences and configuration."
+          icon={Settings}
+        />
       </motion.div>
 
       <Tabs defaultValue="general">
@@ -61,10 +63,10 @@ export default function SettingsPage() {
         </TabsList>
 
         <TabsContent value="general" className="mt-6 space-y-6">
-          <Card className="border-0 shadow-sm">
+          <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Globe className="h-5 w-5 text-primary" />
+              <CardTitle className="flex items-center gap-2">
+                <Globe className="h-5 w-5 text-muted-foreground" />
                 Workspace
               </CardTitle>
               <CardDescription>Manage your workspace configuration.</CardDescription>
@@ -77,10 +79,10 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-sm">
+          <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Bell className="h-5 w-5 text-primary" />
+              <CardTitle className="flex items-center gap-2">
+                <Bell className="h-5 w-5 text-muted-foreground" />
                 Notifications
               </CardTitle>
               <CardDescription>Manage your notification preferences.</CardDescription>
@@ -98,10 +100,10 @@ export default function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="appearance" className="mt-6 space-y-6">
-          <Card className="border-0 shadow-sm">
+          <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Palette className="h-5 w-5 text-primary" />
+              <CardTitle className="flex items-center gap-2">
+                <Palette className="h-5 w-5 text-muted-foreground" />
                 Appearance
               </CardTitle>
               <CardDescription>Customize how HearMe AI looks.</CardDescription>
@@ -132,9 +134,9 @@ export default function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="developer" className="mt-6 space-y-6">
-          <Card className="border-0 shadow-sm">
+          <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
+              <CardTitle className="flex items-center gap-2">
                 <Code2 className="h-5 w-5 text-amber-500" />
                 Developer Mode
               </CardTitle>
@@ -151,6 +153,6 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+    </PageShell>
   )
 }

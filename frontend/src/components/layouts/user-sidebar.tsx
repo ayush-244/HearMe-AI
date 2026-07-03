@@ -8,6 +8,7 @@ import { useUiStore } from "@/store/ui-store"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
+import { Input } from "@/components/ui/input"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   MessageSquare,
@@ -15,7 +16,6 @@ import {
   Brain,
   Database,
   Settings,
-  LayoutDashboard,
   Search,
   Plus,
   Trash2,
@@ -31,20 +31,21 @@ import {
 } from "lucide-react"
 import { formatDate } from "@/lib/utils"
 import { toast } from "@/components/ui/toast"
+import { LAYOUT, MOTION, FEATURE_ACCENTS, ICON_SIZE } from "@/lib/design-tokens"
 
 const NAV_ITEMS_FULL = [
-  { label: "Chat", href: "/chat", Icon: MessageSquare, color: "text-blue-400" },
-  { label: "Library", href: "/library", Icon: FileText, color: "text-emerald-400" },
-  { label: "Knowledge", href: "/knowledge", Icon: Brain, color: "text-amber-400" },
-  { label: "Memory", href: "/memory", Icon: Database, color: "text-cyan-400" },
-  { label: "Settings", href: "/settings", Icon: Settings, color: "text-zinc-400" },
+  { label: "Chat", href: "/chat", Icon: MessageSquare, accent: FEATURE_ACCENTS.chat },
+  { label: "Library", href: "/library", Icon: FileText, accent: FEATURE_ACCENTS.library },
+  { label: "Knowledge", href: "/knowledge", Icon: Brain, accent: FEATURE_ACCENTS.knowledge },
+  { label: "Memory", href: "/memory", Icon: Database, accent: FEATURE_ACCENTS.memory },
+  { label: "Settings", href: "/settings", Icon: Settings, accent: FEATURE_ACCENTS.settings },
 ]
 
 function Tooltip({ children, label }: { children: React.ReactNode; label: string }) {
   return (
     <div className="relative group/tooltip">
       {children}
-      <div className="pointer-events-none absolute left-full ml-2.5 top-1/2 -translate-y-1/2 z-50 whitespace-nowrap rounded-md bg-zinc-900 border border-zinc-800 px-2.5 py-1.5 text-xs font-medium text-zinc-100 opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-150 shadow-xl">
+      <div className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 z-50 whitespace-nowrap rounded-lg border border-border bg-popover px-2 py-1.5 text-caption opacity-0 group-hover/tooltip:opacity-100 transition-fade shadow-md">
         {label}
       </div>
     </div>
@@ -80,19 +81,19 @@ function ConversationItem({
   if (editing) {
     return (
       <div className="flex items-center gap-1 px-2 py-1.5">
-        <input
+        <Input
           value={editTitle}
           onChange={(e) => setEditTitle(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") handleRename(); if (e.key === "Escape") setEditing(false) }}
-          className="flex-1 text-sm bg-zinc-800 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-blue-500 text-zinc-100"
+          className="flex-1 h-7 text-xs"
           autoFocus
           onBlur={handleRename}
         />
-        <Button variant="ghost" size="icon" className="h-6 w-6 text-zinc-400 hover:text-zinc-100" onClick={handleRename}>
-          <Check className="h-3 w-3" />
+        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleRename} aria-label="Confirm rename">
+          <Check className={ICON_SIZE.xs} />
         </Button>
-        <Button variant="ghost" size="icon" className="h-6 w-6 text-zinc-400 hover:text-zinc-100" onClick={() => setEditing(false)}>
-          <X className="h-3 w-3" />
+        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setEditing(false)} aria-label="Cancel rename">
+          <X className={ICON_SIZE.xs} />
         </Button>
       </div>
     )
@@ -101,57 +102,61 @@ function ConversationItem({
   return (
     <div
       className={cn(
-        "group relative flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm cursor-pointer transition-all duration-150",
+        "group relative flex items-center gap-2 rounded-lg px-2 py-2 text-sm cursor-pointer transition-all duration-200",
         isActive
-          ? "bg-zinc-800 text-zinc-100 border-l-2 border-blue-500 pl-2"
-          : "text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-200 border-l-2 border-transparent"
+          ? "bg-sidebar-accent text-sidebar-foreground border-l-2 border-ring pl-2"
+          : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground border-l-2 border-transparent"
       )}
       onClick={onSelect}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect() } }}
     >
-      <MessageSquare className={cn("h-3.5 w-3.5 shrink-0", isActive ? "text-blue-400" : "text-zinc-500")} />
-      {conv.pinned && <Pin className="h-2.5 w-2.5 shrink-0 text-amber-400" />}
-      <span className="flex-1 truncate text-xs">{conv.title}</span>
+      <MessageSquare className={cn(ICON_SIZE.sm, "shrink-0", isActive ? FEATURE_ACCENTS.chat : "text-muted-foreground")} />
+      {conv.pinned && <Pin className={cn(ICON_SIZE.xs, "shrink-0 text-amber-400")} />}
+      <span className="flex-1 truncate text-caption">{conv.title}</span>
 
-      {/* Hover actions */}
       <span className="hidden group-hover:flex items-center gap-0.5 shrink-0">
         <div className="relative">
           <Button
             variant="ghost"
             size="icon"
-            className="h-5 w-5 text-zinc-500 hover:text-zinc-300"
+            className="h-5 w-5 text-muted-foreground hover:text-foreground"
             onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu) }}
+            aria-label="Conversation options"
+            aria-expanded={showMenu}
           >
-            <MoreHorizontal className="h-3 w-3" />
+            <MoreHorizontal className={ICON_SIZE.xs} />
           </Button>
           {showMenu && (
             <>
-              <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
-              <div className="absolute right-0 top-full z-50 mt-1 w-40 rounded-lg border border-zinc-800 bg-zinc-900 p-1 shadow-xl">
+              <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} aria-hidden="true" />
+              <div className="absolute right-0 top-full z-50 mt-1 w-40 rounded-lg border border-border bg-popover p-1 shadow-md">
                 <button
-                  className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800 transition-colors"
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-caption hover:bg-accent transition-all duration-200 cursor-pointer"
                   onClick={(e) => { e.stopPropagation(); setEditing(true); setShowMenu(false) }}
                 >
-                  <Pencil className="h-3 w-3" /> Rename
+                  <Pencil className={ICON_SIZE.xs} /> Rename
                 </button>
                 <button
-                  className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800 transition-colors"
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-caption hover:bg-accent transition-all duration-200 cursor-pointer"
                   onClick={(e) => { e.stopPropagation(); onTogglePin(); setShowMenu(false) }}
                 >
-                  <Pin className="h-3 w-3" /> {conv.pinned ? "Unpin" : "Pin"}
+                  <Pin className={ICON_SIZE.xs} /> {conv.pinned ? "Unpin" : "Pin"}
                 </button>
-                <Separator className="my-1 bg-zinc-800" />
+                <Separator className="my-1" />
                 <button
-                  className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-xs text-red-400 hover:bg-red-500/10 transition-colors"
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-caption text-destructive hover:bg-destructive/10 transition-all duration-200 cursor-pointer"
                   onClick={(e) => { e.stopPropagation(); onDelete(); setShowMenu(false) }}
                 >
-                  <Trash2 className="h-3 w-3" /> Delete
+                  <Trash2 className={ICON_SIZE.xs} /> Delete
                 </button>
               </div>
             </>
           )}
         </div>
       </span>
-      <span className={cn("text-[10px] text-zinc-600 shrink-0", "group-hover:hidden")}>
+      <span className={cn("text-caption opacity-60 shrink-0", "group-hover:hidden")}>
         {formatDate(conv.updated_at)}
       </span>
     </div>
@@ -219,11 +224,11 @@ export function UserSidebar() {
   return (
     <motion.aside
       initial={false}
-      animate={{ width: sidebarOpen ? 280 : 60 }}
-      className="fixed left-0 top-0 z-40 h-screen border-r border-zinc-800/80 bg-zinc-950 flex flex-col"
-      transition={{ duration: 0.25, ease: "easeInOut" }}
+      animate={{ width: sidebarOpen ? LAYOUT.sidebarExpanded : LAYOUT.sidebarCollapsed }}
+      className="fixed left-0 top-0 z-40 h-screen border-r border-sidebar-border bg-sidebar flex flex-col"
+      transition={{ duration: MOTION.sidebar / 1000, ease: "easeInOut" }}
+      aria-label="Main sidebar"
     >
-      {/* Header */}
       <div className={cn("flex items-center h-14 px-3 shrink-0", sidebarOpen ? "justify-between" : "justify-center")}>
         <AnimatePresence mode="wait">
           {sidebarOpen && (
@@ -231,10 +236,10 @@ export function UserSidebar() {
               initial={{ opacity: 0, x: -8 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -8 }}
-              transition={{ duration: 0.15 }}
+              transition={{ duration: MOTION.fade / 1000 }}
             >
-              <Link href="/" className="flex items-center gap-2 font-semibold text-sm text-zinc-100">
-                <Sparkles className="h-4 w-4 text-blue-400" />
+              <Link href="/" className="flex items-center gap-2 text-card-title">
+                <Sparkles className={cn(ICON_SIZE.md, FEATURE_ACCENTS.chat)} />
                 <span>HearMe AI</span>
               </Link>
             </motion.div>
@@ -244,48 +249,47 @@ export function UserSidebar() {
           variant="ghost"
           size="icon"
           onClick={toggleSidebar}
-          className="shrink-0 h-8 w-8 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800"
+          className="shrink-0 h-8 w-8 text-muted-foreground hover:text-foreground"
           aria-label={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
         >
-          {sidebarOpen ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeft className="h-4 w-4" />}
+          {sidebarOpen ? <PanelLeftClose className={ICON_SIZE.md} /> : <PanelLeft className={ICON_SIZE.md} />}
         </Button>
       </div>
 
-      <div className="border-t border-zinc-800/80 shrink-0" />
+      <Separator />
 
-      {/* Expanded: New chat + search */}
       <AnimatePresence>
         {sidebarOpen && (
           <motion.div
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.15 }}
+            transition={{ duration: MOTION.fade / 1000 }}
             className="px-3 pt-3 pb-2 space-y-2 shrink-0"
           >
             <Button
               onClick={handleNewChat}
-              className="w-full justify-start gap-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border-0 text-sm font-medium h-9"
-              variant="outline"
+              className="w-full justify-start gap-2 text-sm font-medium h-9"
+              variant="secondary"
               size="sm"
             >
-              <Plus className="h-4 w-4 text-zinc-400" />
+              <Plus className={cn(ICON_SIZE.md, "text-muted-foreground")} />
               New Chat
             </Button>
             <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-500" />
-              <input
+              <Search className={cn("absolute left-2.5 top-1/2 -translate-y-1/2", ICON_SIZE.sm, "text-muted-foreground")} />
+              <Input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search conversations..."
-                className="w-full rounded-lg border border-zinc-800 bg-zinc-900 pl-8 pr-3 py-1.5 text-xs placeholder:text-zinc-600 text-zinc-300 outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500/50 transition-colors"
+                className="pl-8 h-8 text-xs"
+                aria-label="Search conversations"
               />
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Collapsed: New chat button */}
       {!sidebarOpen && (
         <div className="flex flex-col items-center pt-3 pb-2 shrink-0">
           <Tooltip label="New Chat">
@@ -293,22 +297,21 @@ export function UserSidebar() {
               onClick={handleNewChat}
               variant="ghost"
               size="icon"
-              className="h-9 w-9 rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800"
+              className="h-9 w-9"
               aria-label="New Chat"
             >
-              <Plus className="h-4 w-4" />
+              <Plus className={ICON_SIZE.md} />
             </Button>
           </Tooltip>
         </div>
       )}
 
-      {/* Navigation / Conversation list */}
       <nav className="flex-1 overflow-y-auto pb-4 scrollbar-thin" aria-label="Navigation">
         {sidebarOpen ? (
           <div className="px-2 space-y-0.5">
             {pinnedConvs.length > 0 && (
               <>
-                <p className="px-2 pt-2 pb-1 text-[10px] font-semibold text-zinc-600 uppercase tracking-widest">Pinned</p>
+                <p className="px-2 pt-2 pb-1 text-overline">Pinned</p>
                 {pinnedConvs.map((conv) => (
                   <ConversationItem
                     key={conv.id}
@@ -325,7 +328,7 @@ export function UserSidebar() {
             {recentConvs.length > 0 && (
               <>
                 {pinnedConvs.length > 0 && (
-                  <p className="px-2 pt-3 pb-1 text-[10px] font-semibold text-zinc-600 uppercase tracking-widest">Recent</p>
+                  <p className="px-2 pt-3 pb-1 text-overline">Recent</p>
                 )}
                 {recentConvs.map((conv) => (
                   <ConversationItem
@@ -342,37 +345,34 @@ export function UserSidebar() {
             )}
             {conversations.length === 0 && !searchQuery && (
               <div className="px-3 py-10 text-center">
-                <MessagesSquare className="h-8 w-8 mx-auto mb-2 text-zinc-700" />
-                <p className="text-xs text-zinc-600">No conversations yet</p>
-                <p className="text-[10px] text-zinc-700 mt-0.5">Start a new chat to begin</p>
+                <MessagesSquare className={cn(ICON_SIZE.xl, "mx-auto mb-2 text-muted-foreground/40")} />
+                <p className="text-caption">No conversations yet</p>
+                <p className="text-caption opacity-60 mt-1">Start a new chat to begin</p>
               </div>
             )}
             {conversations.length === 0 && searchQuery && (
               <div className="px-3 py-8 text-center">
-                <p className="text-xs text-zinc-600">No matching conversations</p>
+                <p className="text-caption">No matching conversations</p>
               </div>
             )}
           </div>
         ) : (
-          /* Collapsed: icon nav */
           <div className="flex flex-col items-center gap-1 pt-2 px-1.5">
             {NAV_ITEMS_FULL.map((navItem) => {
               const active = pathname === navItem.href || (navItem.href !== "/" && pathname.startsWith(navItem.href))
               return (
                 <Tooltip key={navItem.href} label={navItem.label}>
-                  <Link href={navItem.href} aria-label={navItem.label}>
-                    <motion.div
-                      whileHover={{ scale: 1.08 }}
-                      whileTap={{ scale: 0.96 }}
+                  <Link href={navItem.href} aria-label={navItem.label} aria-current={active ? "page" : undefined}>
+                    <div
                       className={cn(
-                        "flex items-center justify-center rounded-lg p-2.5 w-10 h-10 transition-all duration-150",
+                        "flex items-center justify-center rounded-lg p-2 w-10 h-10 transition-all duration-200",
                         active
-                          ? `bg-zinc-800 border border-zinc-700 ${navItem.color}`
-                          : "text-zinc-600 hover:bg-zinc-800/60 hover:text-zinc-300"
+                          ? "bg-sidebar-accent border border-border"
+                          : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground"
                       )}
                     >
-                      <navItem.Icon className="h-4.5 w-4.5" />
-                    </motion.div>
+                      <navItem.Icon className={cn(ICON_SIZE.md, active ? navItem.accent : "text-muted-foreground")} />
+                    </div>
                   </Link>
                 </Tooltip>
               )
@@ -381,24 +381,25 @@ export function UserSidebar() {
         )}
       </nav>
 
-      {/* Footer */}
-      <div className="border-t border-zinc-800/80 shrink-0">
+      <Separator />
+
+      <div className="shrink-0">
         {sidebarOpen ? (
           <div className="p-3">
-            <div className="flex items-center gap-2.5 rounded-lg bg-zinc-900 border border-zinc-800 px-3 py-2.5">
+            <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/50 px-3 py-2">
               <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-medium text-zinc-300">HearMe AI</p>
-                <p className="text-[10px] text-zinc-600 truncate">Knowledge + Memory active</p>
+                <p className="text-caption font-medium">HearMe AI</p>
+                <p className="text-caption opacity-60 truncate">Knowledge + Memory active</p>
               </div>
-              <Sparkles className="h-3.5 w-3.5 text-zinc-600 shrink-0" />
+              <Sparkles className={cn(ICON_SIZE.sm, "text-muted-foreground shrink-0")} />
             </div>
           </div>
         ) : (
           <div className="flex justify-center p-3">
             <Tooltip label="AI Active">
-              <div className="flex items-center justify-center h-9 w-9 rounded-lg bg-zinc-900 border border-zinc-800">
-                <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              <div className="flex items-center justify-center h-9 w-9 rounded-lg border border-border bg-muted/50">
+                <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" aria-label="AI active" />
               </div>
             </Tooltip>
           </div>

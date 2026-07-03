@@ -25,6 +25,10 @@ import { formatDate } from "@/lib/utils"
 import { motion, AnimatePresence } from "framer-motion"
 import { toast } from "@/components/ui/toast"
 import { useDeveloperStore } from "@/stores/developer-store"
+import { MEMORY_TYPE_CONFIG, FEATURE_ACCENTS, ICON_SIZE, TYPOGRAPHY } from "@/lib/design-tokens"
+import { PageShell } from "@/components/ui/page-shell"
+import { PageHeader } from "@/components/ui/page-header"
+import { cn } from "@/lib/utils"
 
 interface MemoryDisplay {
   memory_id: string
@@ -37,11 +41,11 @@ interface MemoryDisplay {
   confidence?: number
 }
 
-const typeConfig: Record<string, { label: string; icon: React.ElementType; color: string; bg: string }> = {
-  semantic: { label: "Fact", icon: BookOpen, color: "text-blue-500", bg: "bg-blue-500/10" },
-  episodic: { label: "Experience", icon: Clock, color: "text-green-500", bg: "bg-green-500/10" },
-  preference: { label: "Preference", icon: Heart, color: "text-purple-500", bg: "bg-purple-500/10" },
-  working: { label: "Working", icon: Lightbulb, color: "text-amber-500", bg: "bg-amber-500/10" },
+const typeIcons: Record<string, React.ElementType> = {
+  semantic: BookOpen,
+  episodic: Clock,
+  preference: Heart,
+  working: Lightbulb,
 }
 
 function MemoryCard({
@@ -54,8 +58,8 @@ function MemoryCard({
   developerMode: boolean
 }) {
   const [deleting, setDeleting] = useState(false)
-  const config = typeConfig[mem.type] || typeConfig.semantic
-  const Icon = config.icon
+  const config = MEMORY_TYPE_CONFIG[mem.type] || MEMORY_TYPE_CONFIG.semantic
+  const Icon = typeIcons[mem.type] || BookOpen
 
   const handleDelete = useCallback(async () => {
     setDeleting(true)
@@ -78,15 +82,15 @@ function MemoryCard({
       exit={{ opacity: 0, scale: 0.95 }}
       transition={{ duration: 0.2 }}
     >
-      <Card className="group relative border-0 shadow-sm hover:shadow-md transition-all duration-200">
+      <Card className="group relative transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
         <CardContent className="p-4">
           <div className="flex items-start gap-3">
-            <div className={`rounded-xl p-2.5 ${config.bg} shrink-0`}>
-              <Icon className={`h-4 w-4 ${config.color}`} />
+            <div className="icon-container">
+              <Icon className={cn(ICON_SIZE.md, config.color)} />
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 mb-1">
-                <Badge variant="secondary" className={`${config.color} ${config.bg} border-0 text-[11px]`}>
+                <Badge variant="secondary" className={cn(config.color, "border-0 text-[11px]")}>
                   {config.label}
                 </Badge>
                 {mem.pinned && <Pin className="h-3 w-3 text-amber-500" />}
@@ -178,14 +182,13 @@ export default function MemoryPage() {
   }
 
   return (
-    <div className="p-6 lg:p-8 space-y-6">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
-          <User className="h-8 w-8 text-purple-500" />
-          Things I Know About You
-        </h1>
-        <p className="text-muted-foreground">Facts, preferences, and experiences I&apos;ve learned from our conversations.</p>
-      </motion.div>
+    <PageShell maxWidth="full">
+      <PageHeader
+        title="Things I Know About You"
+        description="Facts, preferences, and experiences I've learned from our conversations."
+        icon={User}
+        iconClassName={FEATURE_ACCENTS.memory}
+      />
 
       <div className="flex gap-3">
         <div className="relative flex-1">
@@ -212,15 +215,15 @@ export default function MemoryPage() {
       {!searchResults && (
         <div className="grid gap-4 grid-cols-2 sm:grid-cols-4">
           {[
-            { label: "All Memories", count: memories.length, icon: Brain, color: "text-purple-500", bg: "bg-purple-500/10" },
-            { label: "Facts", count: grouped.facts.length, icon: BookOpen, color: "text-blue-500", bg: "bg-blue-500/10" },
-            { label: "Preferences", count: grouped.preferences.length, icon: Heart, color: "text-pink-500", bg: "bg-pink-500/10" },
-            { label: "Experiences", count: grouped.experiences.length, icon: Award, color: "text-amber-500", bg: "bg-amber-500/10" },
+            { label: "All Memories", count: memories.length, icon: Brain, accent: FEATURE_ACCENTS.memory },
+            { label: "Facts", count: grouped.facts.length, icon: BookOpen, accent: FEATURE_ACCENTS.chat },
+            { label: "Preferences", count: grouped.preferences.length, icon: Heart, accent: "text-purple-400" },
+            { label: "Experiences", count: grouped.experiences.length, icon: Award, accent: FEATURE_ACCENTS.knowledge },
           ].map((stat) => (
-            <Card key={stat.label} className="border-0 shadow-sm">
+            <Card key={stat.label}>
               <CardContent className="p-4 flex items-center gap-3">
-                <div className={`rounded-xl p-2.5 ${stat.bg}`}>
-                  <stat.icon className={`h-4 w-4 ${stat.color}`} />
+                <div className="icon-container">
+                  <stat.icon className={cn(ICON_SIZE.md, stat.accent)} />
                 </div>
                 <div>
                   <p className="text-xl font-bold">{stat.count}</p>
@@ -237,7 +240,7 @@ export default function MemoryPage() {
           {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28" />)}
         </div>
       ) : memories.length === 0 ? (
-        <Card className="border-0 shadow-sm">
+        <Card>
           <CardContent className="p-12 text-center text-muted-foreground">
             <User className="h-12 w-12 mx-auto mb-3 opacity-50" />
             <p className="font-medium text-lg">Nothing yet</p>
@@ -253,8 +256,8 @@ export default function MemoryPage() {
         <div className="space-y-8">
           {grouped.facts.length > 0 && (
             <div className="space-y-3">
-              <h2 className="text-lg font-semibold flex items-center gap-2">
-                <BookOpen className="h-5 w-5 text-blue-500" />
+              <h2 className={cn(TYPOGRAPHY.sectionTitle, "flex items-center gap-2")}>
+                <BookOpen className={cn(ICON_SIZE.lg, FEATURE_ACCENTS.chat)} />
                 Facts
               </h2>
               <AnimatePresence mode="popLayout">
@@ -269,8 +272,8 @@ export default function MemoryPage() {
 
           {grouped.preferences.length > 0 && (
             <div className="space-y-3">
-              <h2 className="text-lg font-semibold flex items-center gap-2">
-                <Heart className="h-5 w-5 text-purple-500" />
+              <h2 className={cn(TYPOGRAPHY.sectionTitle, "flex items-center gap-2")}>
+                <Heart className={cn(ICON_SIZE.lg, "text-purple-400")} />
                 Preferences
               </h2>
               <AnimatePresence mode="popLayout">
@@ -285,8 +288,8 @@ export default function MemoryPage() {
 
           {grouped.experiences.length > 0 && (
             <div className="space-y-3">
-              <h2 className="text-lg font-semibold flex items-center gap-2">
-                <Award className="h-5 w-5 text-amber-500" />
+              <h2 className={cn(TYPOGRAPHY.sectionTitle, "flex items-center gap-2")}>
+                <Award className={cn(ICON_SIZE.lg, FEATURE_ACCENTS.knowledge)} />
                 Experiences
               </h2>
               <AnimatePresence mode="popLayout">
@@ -301,8 +304,8 @@ export default function MemoryPage() {
 
           {searchResults && memories.filter((m) => m.type === "working").length > 0 && developerMode && (
             <div className="space-y-3">
-              <h2 className="text-lg font-semibold flex items-center gap-2">
-                <Lightbulb className="h-5 w-5 text-amber-500" />
+              <h2 className={cn(TYPOGRAPHY.sectionTitle, "flex items-center gap-2")}>
+                <Lightbulb className={cn(ICON_SIZE.lg, FEATURE_ACCENTS.knowledge)} />
                 Working Memory
               </h2>
               <AnimatePresence mode="popLayout">
@@ -316,6 +319,6 @@ export default function MemoryPage() {
           )}
         </div>
       )}
-    </div>
+    </PageShell>
   )
 }

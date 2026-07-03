@@ -13,6 +13,9 @@ import rehypeHighlight from "rehype-highlight"
 import { motion } from "framer-motion"
 import { useDocuments } from "@/hooks/use-documents"
 import type { Source } from "@/types"
+import { PageShell } from "@/components/ui/page-shell"
+import { PageHeader } from "@/components/ui/page-header"
+import { FEATURE_ACCENTS } from "@/lib/design-tokens"
 
 export default function KnowledgePage() {
   const [question, setQuestion] = useState("")
@@ -34,14 +37,13 @@ export default function KnowledgePage() {
   const indexedDocs = docsData?.documents?.filter((d) => d.status === "indexed") ?? []
 
   return (
-    <div className="p-6 lg:p-8 space-y-6">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
-          <Brain className="h-8 w-8 text-primary" />
-          Knowledge Explorer
-        </h1>
-        <p className="text-muted-foreground">Search across all your documents and discover insights.</p>
-      </motion.div>
+    <PageShell maxWidth="full">
+      <PageHeader
+        title="Knowledge Explorer"
+        description="Search across all your documents and discover insights."
+        icon={Brain}
+        iconClassName={FEATURE_ACCENTS.knowledge}
+      />
 
       {indexedDocs.length > 0 && (
         <div className="flex flex-wrap gap-2">
@@ -88,10 +90,10 @@ export default function KnowledgePage() {
 
       {mutation.isPending && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-          <Card className="border-0 shadow-sm bg-gradient-to-br from-primary/5 to-transparent">
+          <Card>
             <CardContent className="p-8 text-center">
-              <div className="inline-flex rounded-xl bg-primary/10 p-3 mb-4">
-                <Search className="h-6 w-6 text-primary animate-pulse" />
+              <div className="icon-container inline-flex mb-4">
+                <Search className="h-6 w-6 text-muted-foreground animate-pulse" />
               </div>
               <p className="font-medium">Searching your knowledge...</p>
               <p className="text-sm text-muted-foreground mt-1">Scanning documents and generating answer</p>
@@ -101,7 +103,7 @@ export default function KnowledgePage() {
       )}
 
       {mutation.isError && (
-        <Card className="border-0 shadow-sm border-destructive/20 bg-destructive/5">
+        <Card className="border-destructive/20">
           <CardContent className="p-6 text-center">
             <p className="text-destructive font-medium">Something went wrong</p>
             <p className="text-sm text-muted-foreground mt-1">Please try again or rephrase your question.</p>
@@ -111,11 +113,11 @@ export default function KnowledgePage() {
 
       {hasResult && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-          <Card className="border-0 shadow-md bg-gradient-to-br from-primary/5 to-transparent">
+          <Card>
             <CardContent className="p-6">
               <div className="flex items-center gap-2 mb-4">
-                <div className="rounded-lg bg-primary/10 p-2">
-                  <Brain className="h-5 w-5 text-primary" />
+                <div className="icon-container">
+                  <Brain className="h-5 w-5 text-muted-foreground" />
                 </div>
                 <div>
                   <p className="font-semibold">Answer</p>
@@ -148,7 +150,7 @@ export default function KnowledgePage() {
           </Card>
 
           {sources.length > 0 && (
-            <Card className="border-0 shadow-sm">
+            <Card>
               <CardContent className="p-6">
                 <p className="text-sm font-medium mb-3 flex items-center gap-2">
                   <FileText className="h-4 w-4 text-muted-foreground" />
@@ -156,9 +158,9 @@ export default function KnowledgePage() {
                 </p>
                 <div className="grid gap-2 sm:grid-cols-2">
                   {sources.map((source, i) => (
-                    <div key={i} className="flex items-start gap-3 rounded-lg border p-3 hover:bg-accent/50 transition-colors">
-                      <div className="rounded-lg bg-blue-500/10 p-2">
-                        <FileText className="h-4 w-4 text-blue-500" />
+                    <div key={i} className="flex items-start gap-3 rounded-lg border border-border p-3 hover:bg-accent/50 transition-all duration-200">
+                      <div className="icon-container !p-2">
+                        <FileText className="h-4 w-4 text-emerald-400" />
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm font-medium truncate">{source.title || "Untitled"}</p>
@@ -183,10 +185,10 @@ export default function KnowledgePage() {
       )}
 
       {!hasResult && !mutation.isPending && !mutation.isError && (
-        <Card className="border-0 shadow-sm bg-gradient-to-br from-muted/50 to-transparent">
+        <Card>
           <CardContent className="p-12 text-center">
-            <div className="inline-flex rounded-xl bg-primary/5 p-4 mb-4">
-              <Layers className="h-10 w-10 text-primary opacity-60" />
+            <div className="icon-container inline-flex mb-4 !p-4">
+              <Layers className="h-10 w-10 text-muted-foreground opacity-60" />
             </div>
             <p className="font-medium text-lg">Explore your knowledge</p>
             <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto">
@@ -207,6 +209,6 @@ export default function KnowledgePage() {
           </CardContent>
         </Card>
       )}
-    </div>
+    </PageShell>
   )
 }

@@ -1,8 +1,11 @@
 "use client"
 
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
-import { MessageSquare, FileText, User, Activity, BookOpen, ArrowRight, Sparkles } from "lucide-react"
+import { MessageSquare, FileText, Activity, BookOpen, ArrowRight, Sparkles } from "lucide-react"
+import { SurfaceCard } from "@/components/ui/surface-card"
+import { FEATURE_ACCENTS, ICON_SIZE, TYPOGRAPHY } from "@/lib/design-tokens"
+import { cn } from "@/lib/utils"
 
 interface EmptyConversationProps {
   onSelect: (text: string) => void
@@ -22,18 +25,14 @@ const ACTION_CARDS = [
     title: "Start Chat",
     desc: "Ask questions & get AI answers",
     icon: MessageSquare,
-    color: "text-blue-400",
-    bg: "bg-blue-500/10",
-    border: "border-blue-500/20",
+    accent: FEATURE_ACCENTS.chat,
     prompt: "Hello! What can you help me with today?",
   },
   {
     title: "Upload Document",
     desc: "Process PDFs and text files",
     icon: FileText,
-    color: "text-emerald-400",
-    bg: "bg-emerald-500/10",
-    border: "border-emerald-500/20",
+    accent: FEATURE_ACCENTS.library,
     prompt: "I'd like to upload and analyze a document.",
     href: "/library",
   },
@@ -41,18 +40,14 @@ const ACTION_CARDS = [
     title: "Search Knowledge",
     desc: "Query your knowledge base",
     icon: Activity,
-    color: "text-amber-400",
-    bg: "bg-amber-500/10",
-    border: "border-amber-500/20",
+    accent: FEATURE_ACCENTS.knowledge,
     prompt: "Analyze my knowledge gaps and what I should learn next.",
   },
   {
     title: "View Memories",
     desc: "What do I remember about you?",
     icon: BookOpen,
-    color: "text-cyan-400",
-    bg: "bg-cyan-500/10",
-    border: "border-cyan-500/20",
+    accent: FEATURE_ACCENTS.memory,
     prompt: "What do you know and remember about me?",
   },
 ]
@@ -86,68 +81,58 @@ export function EmptyConversation({ onSelect }: EmptyConversationProps) {
     return () => clearInterval(interval)
   }, [])
 
+  const cardContent = (card: typeof ACTION_CARDS[0]) => (
+    <SurfaceCard interactive padding="md" className="group h-full">
+      <div className="flex items-start gap-3 text-left">
+        <div className="icon-container">
+          <card.icon className={cn(ICON_SIZE.md, card.accent)} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className={TYPOGRAPHY.cardTitle}>{card.title}</p>
+          <p className="text-caption mt-1">{card.desc}</p>
+        </div>
+        <ArrowRight className={cn(ICON_SIZE.sm, "text-muted-foreground shrink-0 mt-0.5 group-hover:text-foreground group-hover:translate-x-0.5 transition-all duration-200")} />
+      </div>
+    </SurfaceCard>
+  )
+
   return (
     <div className="flex flex-col items-center justify-center min-h-full w-full max-w-2xl mx-auto px-4 py-12 text-center">
-      {/* Greeting */}
       <div className="mb-8 space-y-2">
-        <div className="inline-flex items-center gap-2 text-zinc-500 text-sm mb-3">
-          <Sparkles className="h-4 w-4 text-blue-400" />
+        <div className="inline-flex items-center gap-2 text-caption mb-3">
+          <Sparkles className={cn(ICON_SIZE.md, FEATURE_ACCENTS.chat)} />
           <span>HearMe AI</span>
         </div>
-        <h1 className="text-3xl font-semibold tracking-tight text-zinc-100">
+        <h1 className={TYPOGRAPHY.pageTitle}>
           {Greeting()} 👋
         </h1>
-        <p className="text-zinc-500 text-base">
+        <p className={TYPOGRAPHY.bodyMuted}>
           What would you like to do today?
         </p>
       </div>
 
-      {/* Action Cards */}
       <div className="grid w-full grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
         {ACTION_CARDS.map((card, i) =>
           card.href ? (
             <Link key={i} href={card.href} className="group">
-              <div
-                className={`flex items-start gap-3.5 rounded-xl border border-zinc-800 bg-zinc-900/50 p-4 text-left transition-all duration-200 hover:bg-zinc-900 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/20 hover:border-zinc-700`}
-              >
-                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${card.bg} border ${card.border}`}>
-                  <card.icon className={`h-4.5 w-4.5 ${card.color}`} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-zinc-200 group-hover:text-zinc-100">{card.title}</p>
-                  <p className="text-xs text-zinc-500 mt-0.5">{card.desc}</p>
-                </div>
-                <ArrowRight className="h-3.5 w-3.5 text-zinc-600 shrink-0 mt-0.5 group-hover:text-zinc-400 group-hover:translate-x-0.5 transition-all" />
-              </div>
+              {cardContent(card)}
             </Link>
           ) : (
-            <button
-              key={i}
-              onClick={() => onSelect(card.prompt)}
-              className={`group flex items-start gap-3.5 rounded-xl border border-zinc-800 bg-zinc-900/50 p-4 text-left transition-all duration-200 hover:bg-zinc-900 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/20 hover:border-zinc-700`}
-            >
-              <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${card.bg} border ${card.border}`}>
-                <card.icon className={`h-4.5 w-4.5 ${card.color}`} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-zinc-200 group-hover:text-zinc-100">{card.title}</p>
-                <p className="text-xs text-zinc-500 mt-0.5">{card.desc}</p>
-              </div>
-              <ArrowRight className="h-3.5 w-3.5 text-zinc-600 shrink-0 mt-0.5 group-hover:text-zinc-400 group-hover:translate-x-0.5 transition-all" />
+            <button key={i} onClick={() => onSelect(card.prompt)} className="text-left">
+              {cardContent(card)}
             </button>
           )
         )}
       </div>
 
-      {/* Suggested prompts */}
       <div className="w-full">
-        <p className="text-xs font-medium text-zinc-600 uppercase tracking-widest mb-3">Suggested prompts</p>
+        <p className="text-overline mb-3">Suggested prompts</p>
         <div className="flex flex-wrap justify-center gap-2">
           {SUGGESTED_PROMPTS.map((prompt, i) => (
             <button
               key={i}
               onClick={() => onSelect(prompt)}
-              className="rounded-full border border-zinc-800 bg-zinc-900 px-3.5 py-1.5 text-xs text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 hover:border-zinc-700 transition-all duration-150"
+              className="rounded-full border border-border bg-card px-3 py-1.5 text-caption hover:text-foreground hover:bg-accent transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               {prompt}
             </button>
@@ -155,10 +140,9 @@ export function EmptyConversation({ onSelect }: EmptyConversationProps) {
         </div>
       </div>
 
-      {/* Rotating placeholder hint */}
       <div className="mt-8 h-5">
         <p
-          className="text-xs text-zinc-700 transition-opacity duration-300"
+          className="text-caption opacity-60 transition-opacity duration-200"
           style={{ opacity: visible ? 1 : 0 }}
         >
           {ROTATING_PLACEHOLDERS[placeholderIdx]}

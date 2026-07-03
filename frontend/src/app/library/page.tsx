@@ -32,6 +32,9 @@ import { api } from "@/services/api-client"
 import { useDeveloperStore } from "@/stores/developer-store"
 import type { Document } from "@/types"
 import Link from "next/link"
+import { PageShell } from "@/components/ui/page-shell"
+import { PageHeader } from "@/components/ui/page-header"
+import { FEATURE_ACCENTS } from "@/lib/design-tokens"
 
 const FileIcon = memo(function FileIcon({ type }: { type: string }) {
   const icons: Record<string, React.ElementType> = { pdf: FileText, docx: FileSpreadsheet, txt: FileCode, md: FileCode }
@@ -72,10 +75,10 @@ const DocumentCard = memo(function DocumentCard({
       exit={{ opacity: 0, scale: 0.95 }}
       transition={{ duration: 0.2 }}
     >
-      <Card className="group relative border-0 shadow-sm hover:shadow-md transition-all duration-200">
+      <Card className="group relative transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
         <CardContent className="p-4">
           <div className="flex items-start gap-3">
-            <div className={`rounded-xl p-3 ${isReady ? "bg-emerald-500/10" : isFailed ? "bg-red-500/10" : "bg-blue-500/10"}`}>
+            <div className="icon-container">
               <FileIcon type={doc.file_type} />
             </div>
             <div className="min-w-0 flex-1">
@@ -213,15 +216,14 @@ export default function LibraryPage() {
   }, [handleUpload])
 
   return (
-    <div className="p-6 lg:p-8 space-y-6">
+    <PageShell maxWidth="full">
       <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
-            <BookOpen className="h-8 w-8 text-emerald-500" />
-            Library
-          </h1>
-          <p className="text-muted-foreground">Your document collection — uploaded and ready to search.</p>
-        </div>
+        <PageHeader
+          title="Library"
+          description="Your document collection — uploaded and ready to search."
+          icon={BookOpen}
+          iconClassName={FEATURE_ACCENTS.library}
+        />
         <div className="flex items-center gap-2">
           <input
             ref={fileInputRef}
@@ -246,22 +248,22 @@ export default function LibraryPage() {
       </div>
 
       <div className="grid gap-4 grid-cols-3">
-        <Card className="border-0 shadow-sm bg-gradient-to-br from-emerald-500/5 to-transparent">
+        <Card>
           <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-emerald-500">{counts.total}</p>
-            <p className="text-xs text-muted-foreground mt-1">Total Documents</p>
+            <p className="text-2xl font-semibold text-emerald-400">{counts.total}</p>
+            <p className="text-caption mt-1">Total Documents</p>
           </CardContent>
         </Card>
-        <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-500/5 to-transparent">
+        <Card>
           <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-blue-500">{counts.indexed}</p>
-            <p className="text-xs text-muted-foreground mt-1">Indexed</p>
+            <p className="text-2xl font-semibold text-emerald-400">{counts.indexed}</p>
+            <p className="text-caption mt-1">Indexed</p>
           </CardContent>
         </Card>
-        <Card className="border-0 shadow-sm bg-gradient-to-br from-amber-500/5 to-transparent">
+        <Card>
           <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-amber-500">{documents.filter((d) => d.status !== "indexed" && d.status !== "failed").length}</p>
-            <p className="text-xs text-muted-foreground mt-1">Processing</p>
+            <p className="text-2xl font-semibold text-amber-400">{documents.filter((d) => d.status !== "indexed" && d.status !== "failed").length}</p>
+            <p className="text-caption mt-1">Processing</p>
           </CardContent>
         </Card>
       </div>
@@ -306,7 +308,7 @@ export default function LibraryPage() {
           ))}
         </div>
       ) : documents.length === 0 ? (
-        <Card className="border-0 shadow-sm">
+        <Card>
           <CardContent className="p-12 text-center text-muted-foreground">
             <BookOpen className="h-12 w-12 mx-auto mb-3 opacity-50" />
             <p className="font-medium">
@@ -330,13 +332,13 @@ export default function LibraryPage() {
               ))}
             </div>
           ) : (
-            <Card className="border-0 shadow-sm">
+            <Card>
               <CardContent className="p-2">
                 {documents.map((doc, i) => (
                   <div key={doc.id}>
                     {i > 0 && <div className="mx-3 border-t" />}
-                    <div className="flex items-center gap-4 p-3 rounded-lg hover:bg-accent/50 transition-colors group">
-                      <div className={`rounded-lg p-2 ${doc.status === "indexed" ? "bg-emerald-500/10" : doc.status === "failed" ? "bg-red-500/10" : "bg-blue-500/10"}`}>
+                    <div className="flex items-center gap-4 p-3 rounded-lg hover:bg-accent/50 transition-all duration-200 group">
+                      <div className="icon-container !p-2">
                         <FileIcon type={doc.file_type} />
                       </div>
                       <div className="min-w-0 flex-1">
@@ -367,6 +369,6 @@ export default function LibraryPage() {
           )}
         </AnimatePresence>
       )}
-    </div>
+    </PageShell>
   )
 }

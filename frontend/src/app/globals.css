@@ -22,53 +22,79 @@
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
-  --radius: 0.625rem;
+  --color-sidebar: hsl(var(--sidebar));
+  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --color-sidebar-border: hsl(var(--sidebar-border));
+  --color-sidebar-accent: hsl(var(--sidebar-accent));
+  --color-sidebar-muted: hsl(var(--sidebar-muted));
+  --radius: 0.75rem;
+  --radius-sm: 0.5rem;
+  --radius-lg: 1rem;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --spacing-page: 1.5rem;
+  --spacing-section: 1.5rem;
+  --sidebar-width-expanded: 280px;
+  --sidebar-width-collapsed: 60px;
+  --dev-sidebar-width: 240px;
+  --header-height: 3.5rem;
+  --duration-fast: 180ms;
+  --duration-normal: 200ms;
+  --duration-sidebar: 250ms;
 }
 
 :root {
   --background: 0 0% 100%;
-  --foreground: 240 10% 3.9%;
+  --foreground: 220 10% 10%;
   --card: 0 0% 100%;
-  --card-foreground: 240 10% 3.9%;
+  --card-foreground: 220 10% 10%;
   --popover: 0 0% 100%;
-  --popover-foreground: 240 10% 3.9%;
-  --primary: 240 5.9% 10%;
+  --popover-foreground: 220 10% 10%;
+  --primary: 220 10% 10%;
   --primary-foreground: 0 0% 98%;
-  --secondary: 240 4.8% 95.9%;
-  --secondary-foreground: 240 5.9% 10%;
-  --muted: 240 4.8% 95.9%;
-  --muted-foreground: 240 3.8% 46.1%;
-  --accent: 240 4.8% 95.9%;
-  --accent-foreground: 240 5.9% 10%;
-  --destructive: 0 84.2% 60.2%;
+  --secondary: 220 5% 96%;
+  --secondary-foreground: 220 10% 10%;
+  --muted: 220 5% 96%;
+  --muted-foreground: 220 5% 45%;
+  --accent: 220 5% 96%;
+  --accent-foreground: 220 10% 10%;
+  --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 98%;
-  --border: 240 5.9% 90%;
-  --input: 240 5.9% 90%;
-  --ring: 240 5.9% 10%;
+  --border: 220 6% 90%;
+  --input: 220 6% 90%;
+  --ring: 220 10% 10%;
+  --sidebar: 220 6% 97%;
+  --sidebar-foreground: 220 10% 10%;
+  --sidebar-border: 220 6% 90%;
+  --sidebar-accent: 220 5% 94%;
+  --sidebar-muted: 220 5% 45%;
 }
 
 .dark {
-  --background: 240 10% 3.9%;
+  --background: 220 6% 6%;
   --foreground: 0 0% 98%;
-  --card: 240 10% 3.9%;
+  --card: 220 5% 9%;
   --card-foreground: 0 0% 98%;
-  --popover: 240 10% 3.9%;
+  --popover: 220 5% 9%;
   --popover-foreground: 0 0% 98%;
   --primary: 0 0% 98%;
-  --primary-foreground: 240 5.9% 10%;
-  --secondary: 240 3.7% 15.9%;
+  --primary-foreground: 220 6% 6%;
+  --secondary: 220 4% 14%;
   --secondary-foreground: 0 0% 98%;
-  --muted: 240 3.7% 15.9%;
-  --muted-foreground: 240 5% 64.9%;
-  --accent: 240 3.7% 15.9%;
+  --muted: 220 4% 14%;
+  --muted-foreground: 220 5% 55%;
+  --accent: 220 4% 14%;
   --accent-foreground: 0 0% 98%;
-  --destructive: 0 62.8% 30.6%;
+  --destructive: 0 62% 30%;
   --destructive-foreground: 0 0% 98%;
-  --border: 240 3.7% 15.9%;
-  --input: 240 3.7% 15.9%;
-  --ring: 240 4.9% 83.9%;
+  --border: 220 4% 16%;
+  --input: 220 4% 16%;
+  --ring: 220 5% 65%;
+  --sidebar: 220 6% 5%;
+  --sidebar-foreground: 0 0% 98%;
+  --sidebar-border: 220 4% 14%;
+  --sidebar-accent: 220 4% 12%;
+  --sidebar-muted: 220 5% 45%;
 }
 
 * {
@@ -79,4 +105,141 @@ body {
   background: hsl(var(--background));
   color: hsl(var(--foreground));
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Typography hierarchy ─────────────────────────────────── */
+
+.text-page-title {
+  font-size: 1.875rem;
+  line-height: 2.25rem;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  color: hsl(var(--foreground));
+}
+
+.text-section-title {
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  color: hsl(var(--foreground));
+}
+
+.text-card-title {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 500;
+  color: hsl(var(--foreground));
+}
+
+.text-body {
+  font-size: 0.875rem;
+  line-height: 1.5rem;
+  color: hsl(var(--foreground));
+}
+
+.text-body-muted {
+  font-size: 0.875rem;
+  line-height: 1.5rem;
+  color: hsl(var(--muted-foreground));
+}
+
+.text-caption {
+  font-size: 0.75rem;
+  line-height: 1rem;
+  color: hsl(var(--muted-foreground));
+}
+
+.text-overline {
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: hsl(var(--muted-foreground));
+}
+
+/* ── Surface components ───────────────────────────────────── */
+
+.surface-card {
+  border-radius: var(--radius);
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.2);
+}
+
+.surface-card-interactive {
+  border-radius: var(--radius);
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.2);
+  cursor: pointer;
+  transition: transform var(--duration-normal) ease, box-shadow var(--duration-normal) ease, border-color var(--duration-normal) ease;
+}
+
+.surface-card-interactive:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px -2px rgb(0 0 0 / 0.35);
+  border-color: hsl(var(--border) / 0.8);
+}
+
+.icon-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  background: hsl(var(--muted));
+  padding: 0.5rem;
+  flex-shrink: 0;
+}
+
+/* ── Focus ring ───────────────────────────────────────────── */
+
+.focus-ring {
+  outline: none;
+}
+
+.focus-ring:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--ring));
+}
+
+/* ── Motion utilities ─────────────────────────────────────── */
+
+.transition-hover {
+  transition: all var(--duration-normal) ease;
+}
+
+.transition-fade {
+  transition: opacity var(--duration-normal) ease;
+}
+
+.transition-sidebar {
+  transition: all var(--duration-sidebar) ease-in-out;
+}
+
+/* ── Scrollbar ────────────────────────────────────────────── */
+
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--border)) transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.4);
 }

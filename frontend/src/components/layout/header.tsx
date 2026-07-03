@@ -5,6 +5,8 @@ import { Moon, Sun, Menu } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useUiStore } from "@/store/ui-store"
 import { useEffect, useState } from "react"
+import { STATUS_COLORS } from "@/lib/design-tokens"
+import { ICON_SIZE } from "@/lib/design-tokens"
 
 function useMounted() {
   const [mounted, setMounted] = useState(false)
@@ -23,14 +25,10 @@ function AIStatusBadge({ status }: { status: Status }) {
     processing: "Processing...",
   }[status]
 
-  const dotColor = {
-    ready: "bg-emerald-500",
-    thinking: "bg-amber-400",
-    processing: "bg-blue-400",
-  }[status]
+  const dotColor = STATUS_COLORS[status]
 
   return (
-    <div className="flex items-center gap-1.5 text-xs text-zinc-500">
+    <div className="flex items-center gap-2 text-caption" role="status" aria-live="polite">
       <span className={`h-1.5 w-1.5 rounded-full shrink-0 animate-pulse ${dotColor}`} />
       <span>{label}</span>
     </div>
@@ -43,15 +41,15 @@ export function Header({ aiStatus = "ready" }: { aiStatus?: Status }) {
   const mounted = useMounted()
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b border-zinc-800/60 bg-zinc-950/80 backdrop-blur supports-[backdrop-filter]:bg-zinc-950/60 px-4 lg:px-6">
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b border-border bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 lg:px-6">
       <Button
         variant="ghost"
         size="icon"
         onClick={toggleSidebar}
-        className="md:hidden text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800"
+        className="md:hidden text-muted-foreground hover:text-foreground"
         aria-label="Toggle sidebar"
       >
-        <Menu className="h-5 w-5" />
+        <Menu className={ICON_SIZE.lg} />
       </Button>
 
       <div className="flex-1" />
@@ -63,10 +61,10 @@ export function Header({ aiStatus = "ready" }: { aiStatus?: Status }) {
           variant="ghost"
           size="icon"
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          className="text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800"
+          className="text-muted-foreground hover:text-foreground"
           aria-label="Toggle theme"
         >
-          {theme === "dark" ? <Sun className="h-4.5 w-4.5" /> : <Moon className="h-4.5 w-4.5" />}
+          {theme === "dark" ? <Sun className={ICON_SIZE.md} /> : <Moon className={ICON_SIZE.md} />}
         </Button>
       )}
     </header>
