@@ -13,6 +13,13 @@ export function formatDate(date: string) {
   })
 }
 
+export function formatMessageTime(date: string) {
+  return new Date(date).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  })
+}
+
 export function formatTime(ms: number) {
   if (ms < 1000) return `${ms.toFixed(0)}ms`
   return `${(ms / 1000).toFixed(2)}s`

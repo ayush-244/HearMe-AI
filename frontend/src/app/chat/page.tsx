@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense, useState, useRef, useEffect, useCallback, useMemo, memo } from "react"
+import { Suspense, useState, useRef, useEffect, useCallback, useMemo } from "react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useSearchParams, useRouter } from "next/navigation"
 import { api } from "@/services/api-client"
@@ -9,22 +9,13 @@ import { useUiStore } from "@/store/ui-store"
 import { useChatStream } from "@/hooks/use-chat-stream"
 import { useAutoScroll } from "@/hooks/use-auto-scroll"
 import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
 import { ReasoningStages } from "@/components/chat/ReasoningStages"
 import { EmptyConversation } from "@/components/chat/EmptyConversation"
-import ReactMarkdown from "react-markdown"
-import remarkGfm from "remark-gfm"
-import rehypeHighlight from "rehype-highlight"
+import { ChatMessageBubble } from "@/components/chat/chat-message-bubble"
 import {
   Send,
-  Sparkles,
-  Copy,
-  Check,
   RefreshCw,
   ChevronDown,
-  User,
   StopCircle,
   Paperclip,
   X,
@@ -34,8 +25,10 @@ import {
   AlertCircle,
 } from "lucide-react"
 import type { ChatMessage } from "@/types"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
 import { toast } from "@/components/ui/toast"
+import { FOCUS_RING } from "@/lib/design-tokens"
+import { cn } from "@/lib/utils"
 
 interface StreamMessage {
   id: string
@@ -43,116 +36,8 @@ interface StreamMessage {
   content: string
   citations?: string[]
   isStreaming?: boolean
+  timestamp?: string
 }
-
-const ThinkingDots = memo(function ThinkingDots() {
-  return (
-    <div className="flex items-center gap-1.5 py-2">
-      {[0, 1, 2].map((i) => (
-        <motion.div
-          key={i}
-          className="h-2 w-2 rounded-full bg-primary/60"
-          animate={{ opacity: [0.3, 1, 0.3] }}
-          transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.2 }}
-        />
-      ))}
-    </div>
-  )
-})
-
-const MessageBubble = memo(function MessageBubble({
-  msg,
-  onCopy,
-  onRegenerate,
-}: {
-  msg: StreamMessage
-  onCopy: (content: string) => void
-  onRegenerate: () => void
-}) {
-  const [copied, setCopied] = useState(false)
-
-  const handleCopy = useCallback(() => {
-    onCopy(msg.content)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }, [msg.content, onCopy])
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10, scale: 0.98 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ duration: 0.25, ease: "easeOut" }}
-      className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-    >
-      {msg.role === "assistant" && (
-        <Avatar className="h-8 w-8 mt-0.5 ring-2 ring-primary/20 shrink-0">
-          <AvatarFallback className="bg-gradient-to-br from-primary to-primary/60 text-primary-foreground">
-            <Sparkles className="h-4 w-4" />
-          </AvatarFallback>
-        </Avatar>
-      )}
-
-      <div className={`max-w-[80%] ${msg.role === "user" ? "order-first" : ""} space-y-1`}>
-        {msg.role === "user" ? (
-          <div className="rounded-2xl bg-primary text-primary-foreground px-4 py-3 shadow-sm">
-            <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</p>
-          </div>
-        ) : (
-          <div className="rounded-2xl bg-muted/50 border px-4 py-3 shadow-sm">
-            {msg.isStreaming ? (
-              <div>
-                <span className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</span>
-                <motion.span
-                  animate={{ opacity: [1, 0] }}
-                  transition={{ duration: 0.6, repeat: Infinity, repeatType: "reverse" }}
-                  className="inline-block w-[2px] h-4 bg-primary ml-0.5 align-text-bottom"
-                />
-              </div>
-            ) : (
-              <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-muted prose-code:text-primary">
-                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
-                  {msg.content}
-                </ReactMarkdown>
-              </div>
-            )}
-
-            {msg.citations && msg.citations.length > 0 && (
-              <div className="mt-3 pt-3 border-t">
-                <p className="text-xs font-medium text-muted-foreground mb-2">Sources</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {msg.citations.map((c, i) => (
-                    <Badge key={i} variant="secondary" className="text-[11px] gap-1 max-w-[200px]">
-                      <span className="truncate">{c.replace(/[\[\]]/g, "")}</span>
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {!msg.isStreaming && msg.content && (
-              <div className="flex items-center gap-1 mt-3 pt-2 border-t border-border/50">
-                <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-muted" onClick={handleCopy} title="Copy response">
-                  {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
-                </Button>
-                <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-muted" onClick={onRegenerate} title="Regenerate">
-                  <RefreshCw className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {msg.role === "user" && (
-        <Avatar className="h-8 w-8 mt-0.5 ring-2 ring-muted shrink-0">
-          <AvatarFallback className="bg-muted">
-            <User className="h-4 w-4" />
-          </AvatarFallback>
-        </Avatar>
-      )}
-    </motion.div>
-  )
-})
 
 interface UploadProgress {
   status: "uploading" | "processing" | "ready" | "failed"
@@ -195,8 +80,18 @@ function ChatPageInner() {
 
   const dbMessages = useMemo(() => conversation?.messages ?? [], [conversation?.messages])
   const attachedFiles = useMemo(() => conversation?.attached_documents ?? [], [conversation?.attached_documents])
+  const historicalMessageIds = useMemo(
+    () => new Set(dbMessages.map((m: ChatMessage) => m.id)),
+    [dbMessages]
+  )
 
-  const { containerRef, showJumpButton, scrollToBottom } = useAutoScroll([streamMessages, isPending])
+  const { stream: streamQuery, cancel, isStreaming, currentStage, currentLabel } = useChatStream()
+
+  const { containerRef, showJumpButton, scrollToBottom } = useAutoScroll([
+    streamMessages,
+    isPending,
+    isStreaming,
+  ])
 
   useEffect(() => {
     setStreamMessages([])
@@ -230,22 +125,11 @@ function ChatPageInner() {
           content: m.content,
           citations: m.citations,
           isStreaming: false,
-        }))
-      )
-    } {
-      setStreamMessages(
-        dbMessages.map((m: ChatMessage) => ({
-          id: m.id,
-          role: m.role,
-          content: m.content,
-          citations: m.citations,
-          isStreaming: false,
+          timestamp: m.timestamp,
         }))
       )
     }
-  }, [dbMessages, streamMessages.length])
-
-  const { stream: streamQuery, cancel, isStreaming, currentStage, currentLabel } = useChatStream()
+  }, [dbMessages, convId])
 
   async function ensureConversation(): Promise<string> {
     if (convId) return convId
@@ -298,10 +182,11 @@ function ChatPageInner() {
     const cid = await ensureConversation()
 
     const msgId = `stream-${Date.now()}`
+    const now = new Date().toISOString()
     setStreamMessages((prev) => [
       ...prev,
-      { id: `user-${Date.now()}`, role: "user", content: text },
-      { id: msgId, role: "assistant", content: "", isStreaming: true },
+      { id: `user-${Date.now()}`, role: "user", content: text, timestamp: now },
+      { id: msgId, role: "assistant", content: "", isStreaming: true, timestamp: now },
     ])
 
     try {
@@ -351,17 +236,6 @@ function ChatPageInner() {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault()
       handleSend()
-    }
-  }
-
-  const copyMessage = useCallback((content: string) => {
-    navigator.clipboard.writeText(content)
-  }, [])
-
-  function regenerate() {
-    const lastUser = [...streamMessages].reverse().find((m) => m.role === "user")
-    if (lastUser) {
-      setInput(lastUser.content)
     }
   }
 
@@ -437,9 +311,12 @@ function ChatPageInner() {
   const showEmpty = !convLoading && streamMessages.length === 0
 
   return (
-    <div className="flex h-[calc(100vh-3.5rem)] flex-col">
-      <div ref={containerRef} className="flex-1 overflow-y-auto px-4 lg:px-8">
-        <div className="mx-auto max-w-3xl py-6 space-y-6">
+    <div className="relative flex h-[calc(100vh-3.5rem)] flex-col">
+      <div
+        ref={containerRef}
+        className="scrollbar-thin flex-1 overflow-y-auto px-4 lg:px-8"
+      >
+        <div className="mx-auto max-w-3xl space-y-8 py-6">
           {showEmpty && (
             <EmptyConversation 
               onSelect={(text) => {
@@ -482,16 +359,13 @@ function ChatPageInner() {
             </motion.div>
           )}
 
-          <AnimatePresence mode="popLayout">
-            {streamMessages.map((msg) => (
-              <MessageBubble
-                key={msg.id}
-                msg={msg}
-                onCopy={copyMessage}
-                onRegenerate={regenerate}
-              />
-            ))}
-          </AnimatePresence>
+          {streamMessages.map((msg) => (
+            <ChatMessageBubble
+              key={msg.id}
+              msg={msg}
+              shouldAnimate={!historicalMessageIds.has(msg.id)}
+            />
+          ))}
 
           <ReasoningStages currentStage={currentStage} currentLabel={currentLabel} />
         </div>
@@ -501,15 +375,16 @@ function ChatPageInner() {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="absolute bottom-24 left-1/2 -translate-x-1/2 z-10"
+          className="pointer-events-none absolute bottom-24 left-1/2 z-10 -translate-x-1/2"
         >
           <Button
             variant="secondary"
             size="sm"
-            className="rounded-full shadow-lg h-8 gap-1.5"
+            className={cn(FOCUS_RING, "pointer-events-auto h-8 gap-1.5 rounded-full shadow-lg")}
             onClick={() => scrollToBottom()}
+            aria-label="Jump to latest messages"
           >
-            <ChevronDown className="h-4 w-4" />
+            <ChevronDown className="h-4 w-4" aria-hidden="true" />
             Jump to latest
           </Button>
         </motion.div>
