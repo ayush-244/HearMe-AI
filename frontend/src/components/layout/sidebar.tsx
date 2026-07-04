@@ -28,6 +28,7 @@ const iconMap: Record<string, React.ElementType> = {
   FileText,
   BarChart3,
   Settings,
+  Sparkles,
 }
 
 export function Sidebar() {

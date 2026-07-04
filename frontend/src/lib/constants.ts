@@ -7,6 +7,7 @@ export const NAV_ITEMS = [
   { label: "Knowledge", href: "/knowledge", icon: "Brain" },
   { label: "Memory", href: "/memory", icon: "Database" },
   { label: "Settings", href: "/settings", icon: "Settings" },
+  { label: "Personalization", href: "/settings/personalization", icon: "Sparkles" },
 ] as const
 
 export const DEV_NAV_ITEMS = [

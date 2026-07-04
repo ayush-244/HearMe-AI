@@ -39,6 +39,7 @@ const NAV_ITEMS_FULL = [
   { label: "Knowledge", href: "/knowledge", Icon: Brain, accent: FEATURE_ACCENTS.knowledge },
   { label: "Memory", href: "/memory", Icon: Database, accent: FEATURE_ACCENTS.memory },
   { label: "Settings", href: "/settings", Icon: Settings, accent: FEATURE_ACCENTS.settings },
+  { label: "Personalization", href: "/settings/personalization", Icon: Sparkles, accent: FEATURE_ACCENTS.chat },
 ]
 
 function Tooltip({ children, label }: { children: React.ReactNode; label: string }) {
