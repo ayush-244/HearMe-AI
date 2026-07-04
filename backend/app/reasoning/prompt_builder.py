@@ -53,6 +53,7 @@ class PromptBuilder:
         allow_external_knowledge: bool = False,
         memory_context: Optional[List[Dict[str, Any]]] = None,
         intent: Optional[IntentResult] = None,
+        system_prompt: Optional[str] = None,
     ) -> str:
         intent = intent or IntentResult(intent=IntentType.GENERAL_AI)
 
@@ -73,6 +74,9 @@ class PromptBuilder:
         history_block = self._format_history(conversation_history)
 
         sections = []
+
+        if system_prompt:
+            sections.append("--- System Instructions ---\n" + system_prompt)
 
         intent_instruction = self._build_intent_instruction(intent)
         sections.append("--- Intent Instruction ---\n" + intent_instruction)
@@ -238,6 +242,26 @@ class PromptBuilder:
     5. Be concise, accurate, and well-structured.
     6. Do NOT hallucinate or use outside knowledge.
     """
+
+    def build_system_prompt(self, user_settings=None) -> str:
+        base_prompt = (
+            "You are HearMe AI, a helpful assistant for students and developers.\n"
+            "Be accurate, structured, and helpful.\n"
+        )
+
+        if user_settings and user_settings.personality_prompt:
+            base_prompt += (
+                "\nUser Preferences:\n"
+                f"{user_settings.personality_prompt}\n"
+            )
+
+        if user_settings and user_settings.tone:
+            base_prompt += f"\nTone: {user_settings.tone}"
+
+        if user_settings and user_settings.style:
+            base_prompt += f"\nStyle: {user_settings.style}"
+
+        return base_prompt
 
     def reload_templates(self) -> None:
         self._system_template = self._load("knowledge_system.txt")

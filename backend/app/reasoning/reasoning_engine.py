@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional
 
 from ..config.settings import Settings
 from ..services.chat_service import ChatService
+from ..services.user_settings_service import UserSettingsService
 from ..retrieval.search_models import SearchQuery
 from ..retrieval.search_engine import SearchEngine
 from .context_builder import ContextBuilder
@@ -51,6 +52,7 @@ class ReasoningEngine:
         self._last_retrieved_context: Dict[str, str] = {}
         self._context_manager = ConversationContextManager()
         self._query_rewriter = QueryRewriter(self._chat_service)
+        self._user_settings_service = UserSettingsService()
         logger.info("ReasoningEngine initialized with IntentRouter, QueryRewriter, and ConversationContextManager")
 
     def answer(self, query: KnowledgeQuery) -> KnowledgeAnswer:
@@ -264,6 +266,9 @@ class ReasoningEngine:
             len(memory_context) if memory_context else 0,
         )
 
+        settings = self._user_settings_service.get_settings(query.user_id)
+        system_prompt = self._prompt_builder.build_system_prompt(settings)
+
         prompt = self._prompt_builder.build(
             context=context,
             question=routed_query,
@@ -272,6 +277,7 @@ class ReasoningEngine:
             allow_external_knowledge=allow_external,
             memory_context=memory_context,
             intent=intent_result,
+            system_prompt=system_prompt,
         )
 
         generation_start = time.time()

@@ -28,6 +28,7 @@ class KnowledgeChunk:
 class KnowledgeQuery:
     question: str
     workspace_id: str = "default"
+    user_id: str = "default"
     conversation_id: str = ""
     top_k: int = 10
     min_score: float = 0.0
