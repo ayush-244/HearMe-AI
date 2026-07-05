@@ -268,3 +268,5 @@ class PromptBuilder:
         self._user_template = self._load("knowledge_user.txt")
         self._guardrails_template = self._load("knowledge_guardrails.txt")
         logger.info("Prompt templates reloaded")
+
+        
