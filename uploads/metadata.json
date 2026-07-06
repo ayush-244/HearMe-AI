@@ -8,5 +8,15 @@
     "upload_time": "2026-06-28T17:26:54.323313+00:00",
     "storage_path": "C:\\Users\\ayush\\Desktop\\HearMe AI\\uploads\\pdf\\5ca1edb5-5b5e-45f3-997d-5cd19f9df7eb.pdf",
     "failed_stage": null
+  },
+  "f4dc838e-e024-426a-9fa5-12d94b279f7b": {
+    "id": "f4dc838e-e024-426a-9fa5-12d94b279f7b",
+    "filename": "testreport.pdf",
+    "file_type": "pdf",
+    "size": 362406,
+    "status": "indexed",
+    "upload_time": "2026-07-06T17:58:40.739683+00:00",
+    "storage_path": "C:\\Users\\ayush\\Desktop\\HearMe AI\\uploads\\pdf\\f4dc838e-e024-426a-9fa5-12d94b279f7b.pdf",
+    "failed_stage": null
   }
 }

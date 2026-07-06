@@ -71,6 +71,7 @@ export function useChatStream() {
                 opts.onCitation?.(event.citations || [], event.sources || [])
                 break
               case "done":
+                console.log("[1] DONE EVENT", event.result?.retrieval_trace)
                 opts.onDone?.(event.result)
                 setIsStreaming(false)
                 setCurrentStage(null)

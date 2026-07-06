@@ -14,6 +14,8 @@ export function ContextStrip({ trace }: ContextStripProps) {
   const [expanded, setExpanded] = useState(false)
   const prefersReducedMotion = useReducedMotion()
 
+  console.log("[5] ContextStrip", trace)
+
   if (!trace) return null
 
   // Ensure there's something to render to avoid empty component

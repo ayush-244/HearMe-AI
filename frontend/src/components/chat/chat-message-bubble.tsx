@@ -34,6 +34,8 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
   const prefersReducedMotion = useReducedMotion()
   const animateEntry = shouldAnimate && !prefersReducedMotion
 
+  console.log("[4] Bubble", msg.id, msg.retrieval_trace)
+
   const isUser = msg.role === "user"
   const timeLabel = msg.timestamp ? formatMessageTime(msg.timestamp) : null
 

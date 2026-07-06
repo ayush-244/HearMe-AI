@@ -1,0 +1,18 @@
+[
+  {
+    "id": "579c42d7-fb12-4e91-87a4-b7650cf01ade",
+    "conversation_id": "b61b8859-cf59-486d-b565-3dafb38b3c6c",
+    "role": "user",
+    "content": "Summarize my resume",
+    "citations": [],
+    "timestamp": "2026-07-06T18:25:07.959485"
+  },
+  {
+    "id": "39836c21-4179-434c-abd5-3bedbc3b2b46",
+    "conversation_id": "b61b8859-cf59-486d-b565-3dafb38b3c6c",
+    "role": "assistant",
+    "content": "Based on the retrieved knowledge, your resume summary is as follows: \nYou are a B.Tech CSE student with strong foundations in Data Structures, Algorithms, and Object-Oriented Programming [Source 1]. \nYou have experience in building scalable full-stack applications and backend systems [Source 1]. \nYour work experience includes a Summer Research Intern position at SRM University-AP, where you built an end-to-end ML system using Gradient Boosting to predict credit scores [Source 2]. \nYou are also a Core Team Member at Google Developer Groups (GDG), where you have tracked registration data and increased participant engagement [Source 2]. \nYour technical skills include proficiency in programming languages such as Python, JavaScript, C, C++, and Java [Source 3], as well as experience with web technologies, backend & APIs, databases, machine learning, and data science & analytics [Source 3]. \nYou have also obtained certifications, including Oracle Cloud Infrastructure 2025 Certified Data Science Professional and Oracle Certified Professional: Java SE 17 Developer [Source 4]. \n\nPlease note that the provided information does not include the entire resume, but rather a selection of relevant chunks. If you need a more comprehensive summary, additional information may be required.",
+    "citations": [],
+    "timestamp": "2026-07-06T18:25:10.020686"
+  }
+]

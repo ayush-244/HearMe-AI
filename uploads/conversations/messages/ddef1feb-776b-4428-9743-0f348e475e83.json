@@ -1,0 +1,18 @@
+[
+  {
+    "id": "e64b9a96-3614-40d6-8656-c0ffa2871b27",
+    "conversation_id": "ddef1feb-776b-4428-9743-0f348e475e83",
+    "role": "user",
+    "content": "Summarize my resume",
+    "citations": [],
+    "timestamp": "2026-07-06T18:01:13.381770"
+  },
+  {
+    "id": "7af70880-a527-499d-8b66-1b9868f85f04",
+    "conversation_id": "ddef1feb-776b-4428-9743-0f348e475e83",
+    "role": "assistant",
+    "content": "Based on the retrieved knowledge, here is a summary of your resume [Source 1]: You are a B.Tech CSE student with strong foundations in Data Structures, Algorithms, and Object-Oriented Programming, experienced in building scalable full-stack applications and backend systems. You are passionate about solving real-world problems using technology and interested in applying software engineering in financial services and large-scale systems.\n\nYour work experience [Source 2] includes a Summer Research Intern position at SRM University-AP, where you built an end-to-end ML system to predict credit scores and deployed an interactive Streamlit dashboard. You are also a Core Team Member at Google Developer Groups (GDG), where you tracked registration data, increased participant engagement, and led campaigns to reach students.\n\nYour technical skills [Source 3] include proficiency in programming languages such as Python, JavaScript, C, C++, and Java, as well as experience with web technologies, backend frameworks, databases, machine learning, and data science tools.\n\nYou also have certifications [Source 4] in Oracle Cloud Infrastructure, Java SE 17 Developer, and MongoDB Certified Associate Developer.\n\nNote that [Source 5] appears to be a medical report and is not relevant to your resume summary. If you would like me to focus on specific aspects of your resume, please let me know.",
+    "citations": [],
+    "timestamp": "2026-07-06T18:01:16.818522"
+  }
+]

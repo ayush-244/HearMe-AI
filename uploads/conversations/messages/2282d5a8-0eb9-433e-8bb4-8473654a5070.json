@@ -1,0 +1,55 @@
+[
+  {
+    "id": "7b5a2a58-1cec-491a-af84-423affafe4e4",
+    "conversation_id": "2282d5a8-0eb9-433e-8bb4-8473654a5070",
+    "role": "user",
+    "content": "Summarize my resume",
+    "citations": [],
+    "timestamp": "2026-07-06T18:03:21.858056"
+  },
+  {
+    "id": "d85eafd3-7026-45e1-a961-b0521184d7e7",
+    "conversation_id": "2282d5a8-0eb9-433e-8bb4-8473654a5070",
+    "role": "assistant",
+    "content": "Based on the retrieved knowledge, here is a summary of your resume [Source 1]: You are a B.Tech CSE student with strong foundations in Data Structures, Algorithms, and Object-Oriented Programming, experienced in building scalable full-stack applications and backend systems. You are passionate about solving real-world problems using technology and interested in applying software engineering in financial services and large-scale systems.\n\nYour work experience [Source 2] includes a Summer Research Intern position at SRM University-AP, where you built an end-to-end ML system using Gradient Boosting to predict credit scores, and a Core Team Member position at Google Developer Groups (GDG), where you tracked registration data and increased participant engagement.\n\nYou have proficiency in various programming languages [Source 3], including Python, JavaScript, C, C++, and Java, as well as experience with web technologies, backend and APIs, databases, machine learning, and data science.\n\nAdditionally, you have obtained several certifications [Source 4], including Oracle Cloud Infrastructure 2025 Certified Data Science Professional, Oracle Certified Professional: Java SE 17 Developer, and MongoDB Certified Associate Developer (Node.js).\n\nNote that [Source 5] appears to be a medical report and is not relevant to your resume. If you would like me to elaborate on any specific aspect of your resume, please let me know.",
+    "citations": [],
+    "timestamp": "2026-07-06T18:03:25.120268"
+  },
+  {
+    "id": "d9040a50-8975-46e1-9ed8-45b34cc4f25e",
+    "conversation_id": "2282d5a8-0eb9-433e-8bb4-8473654a5070",
+    "role": "user",
+    "content": "Summarize my resume",
+    "citations": [],
+    "timestamp": "2026-07-06T18:05:47.062899"
+  },
+  {
+    "id": "2fac3e5c-44fc-4da5-9318-25b811a38d95",
+    "conversation_id": "2282d5a8-0eb9-433e-8bb4-8473654a5070",
+    "role": "assistant",
+    "content": "Based on the retrieved knowledge, here is a summary of your resume [Source 1]: You are a B.Tech CSE student with strong foundations in Data Structures, Algorithms, and Object-Oriented Programming, experienced in building scalable full-stack applications and backend systems. You are passionate about solving real-world problems using technology and interested in applying software engineering in financial services and large-scale systems.\n\nYour projects [Source 2] include Crop Disease Classification, where you built a production-ready CNN achieving 96.5% accuracy, AI-Based Peer Behavior Similarity Detector, where you built an AI-powered anomaly detection system with 92% precision, and Collaborative Class \u2013 Academic Collaboration Platform, where you built a full-stack role-based platform supporting 200+ active users.\n\nNote that [Source 3] and [Source 4] appear to be medical reports and are not relevant to your resume. If you would like me to elaborate on any specific aspect of your resume, please let me know.",
+    "citations": [
+      "[resume \u203a Summary \u203a Page 1]",
+      "[resume \u203a Projects \u203a Page 1]",
+      "[report \u203a body]",
+      "[report \u203a body]"
+    ],
+    "timestamp": "2026-07-06T18:05:49.969908"
+  },
+  {
+    "id": "ea49fae4-fcb1-4fcd-b59a-97b9f673ee53",
+    "conversation_id": "2282d5a8-0eb9-433e-8bb4-8473654a5070",
+    "role": "user",
+    "content": "Summarize my resume",
+    "citations": [],
+    "timestamp": "2026-07-06T18:24:55.775215"
+  },
+  {
+    "id": "4f08c3df-a556-489a-86a8-cb465804c032",
+    "conversation_id": "2282d5a8-0eb9-433e-8bb4-8473654a5070",
+    "role": "assistant",
+    "content": "Based on the retrieved knowledge, here is a summary of your resume [Source 1]: You are a B.Tech CSE student with strong foundations in Data Structures, Algorithms, and Object-Oriented Programming, experienced in building scalable full-stack applications and backend systems. You are passionate about solving real-world problems using technology and interested in applying software engineering in financial services and large-scale systems.\n\nYour projects [Source 2] include Crop Disease Classification, where you built a production-ready CNN achieving 96.5% accuracy, AI-Based Peer Behavior Similarity Detector, where you built an AI-powered anomaly detection system with 92% precision, and Collaborative Class \u2013 Academic Collaboration Platform, where you built a full-stack role-based platform supporting 200+ active users.\n\nNote that [Source 3] and [Source 4] appear to be medical reports and are not relevant to your resume. If you would like me to elaborate on any specific aspect of your resume, please let me know.",
+    "citations": [],
+    "timestamp": "2026-07-06T18:24:59.034539"
+  }
+]

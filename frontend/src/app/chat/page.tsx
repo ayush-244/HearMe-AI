@@ -24,7 +24,7 @@ import {
   CheckCircle2,
   AlertCircle,
 } from "lucide-react"
-import type { ChatMessage } from "@/types"
+import type { ChatMessage, RetrievalTrace } from "@/types"
 import { motion } from "framer-motion"
 import { toast } from "@/components/ui/toast"
 import { FOCUS_RING } from "@/lib/design-tokens"
@@ -37,6 +37,7 @@ interface StreamMessage {
   citations?: string[]
   isStreaming?: boolean
   timestamp?: string
+  retrieval_trace?: RetrievalTrace | null
 }
 
 interface UploadProgress {
@@ -118,17 +119,40 @@ function ChatPageInner() {
 
   useEffect(() => {
     if (convId && dbMessages.length > 0) {
-      setStreamMessages(
-        dbMessages.map((m: ChatMessage) => ({
-          id: m.id,
-          role: m.role,
-          content: m.content,
-          citations: m.citations,
-          isStreaming: false,
-          timestamp: m.timestamp,
-          retrieval_trace: m.retrieval_trace,
-        }))
-      )
+      setStreamMessages((prev) => {
+        const synced = dbMessages.map((m: ChatMessage) => {
+          const existing =
+            prev.find(sm => sm.id === m.id) ??
+            prev.find(
+              sm =>
+                sm.role === m.role &&
+                sm.content.trim() === m.content.trim()
+            )
+          
+          return {
+            id: m.id,
+            role: m.role,
+            content: m.content,
+            citations: m.citations,
+            isStreaming: false,
+            timestamp: m.timestamp,
+            retrieval_trace: m.retrieval_trace ?? existing?.retrieval_trace,
+          }
+        })
+
+        const pendingMessages = prev.filter(sm => {
+          const exists = synced.some(s =>
+            s.id === sm.id ||
+            (
+              s.role === sm.role &&
+              s.content.trim() === sm.content.trim()
+            )
+          )
+          return !exists
+        })
+
+        return [...synced, ...pendingMessages]
+      })
     }
   }, [dbMessages, convId])
 
@@ -140,6 +164,10 @@ function ChatPageInner() {
     router.push(`/chat?id=${conv.id}`, { scroll: false })
     return conv.id
   }
+
+  useEffect(() => {
+    console.log("[3] STREAM STATE", streamMessages)
+  }, [streamMessages])
 
   const knowledgeMutation = useMutation({
     mutationFn: async ({ text, cid }: { text: string; cid: string }) => {
@@ -208,6 +236,7 @@ function ChatPageInner() {
           )
         },
         onDone: async (result) => {
+          console.log("[2] ON DONE", result?.retrieval_trace)
           setStreamMessages((prev) =>
             prev.map((m) => (m.id === msgId ? { ...m, isStreaming: false, content: result?.answer || m.content, citations: result?.citations || m.citations, retrieval_trace: result?.retrieval_trace } : m))
           )
