@@ -48,7 +48,6 @@ class ReasoningEngine:
         self._memory_engine = memory_engine
         self._conversation_histories: Dict[str, List[ConversationTurn]] = {}
         self._intent_router = IntentRouter()
-        self._last_retrieved_chunks: Dict[str, List[Dict[str, Any]]] = {}
         self._last_retrieved_context: Dict[str, str] = {}
         self._context_manager = ConversationContextManager()
         self._query_rewriter = QueryRewriter(self._chat_service)
@@ -63,6 +62,17 @@ class ReasoningEngine:
                 question=query.question or "",
                 answer="Please provide a valid question.",
                 processing_time_ms=0.0,
+            )
+
+        # ── GATE 1: Guardrails (fast-exit before any expensive work) ──────────
+        if not self._guardrails.check_query(query.question):
+            total_time = (time.time() - total_start) * 1000
+            return KnowledgeAnswer(
+                question=query.question,
+                answer="I couldn't process that request.",
+                processing_time_ms=total_time,
+                guardrail_triggered=True,
+                conversation_id=query.conversation_id,
             )
 
         conversation_history = self._get_conversation_history(query.conversation_id)
@@ -90,25 +100,14 @@ class ReasoningEngine:
                     query.question[:60], routed_query[:80], resolved.references,
                 )
 
-        # Phase 27.3 - Intelligent Query Rewrite
-        last_q = ctx.last_question if ctx else ""
-        last_a = ctx.last_answer if ctx else ""
-        curr_topic = ctx.current_topic if ctx else ""
-        
-        rewrite_result = self._query_rewriter.rewrite(
-            query=routed_query,
-            last_question=last_q,
-            last_answer=last_a,
-            current_topic=curr_topic
-        )
-        routed_query = rewrite_result.rewritten_query
-
+        # ── GATE 2: Intent Classification ─────────────────────────────────────
+        last_chunks = self._context_manager.get_last_retrieved_chunks(query.conversation_id) if query.conversation_id else []
         intent_result, _ = self._intent_router.route(
             query=routed_query,
             conversation_id=query.conversation_id,
             history=conversation_history,
             last_assistant_response=last_assistant,
-            last_retrieved_chunks=self._last_retrieved_chunks.get(query.conversation_id or "", []),
+            last_retrieved_chunks=last_chunks,
             turn_count=turn_count,
         )
 
@@ -118,23 +117,26 @@ class ReasoningEngine:
             intent_result.requires_documents, intent_result.requires_memory,
         )
 
+        # ── GATE 3: Intent-Aware Query Rewrite ────────────────────────────────
+        last_q = ctx.last_question if ctx else ""
+        last_a = ctx.last_answer if ctx else ""
+        curr_topic = ctx.current_topic if ctx else ""
+
+        rewrite_result = self._query_rewriter.rewrite(
+            query=routed_query,
+            intent=intent_result,
+            last_question=last_q,
+            last_answer=last_a,
+            current_topic=curr_topic
+        )
+        routed_query = rewrite_result.rewritten_query
+
         if ctx and ctx.conversation_summary:
             summary = f"[Conversation Summary: {ctx.conversation_summary}]"
             if conversation_history:
                 conversation_history = list(conversation_history) + [{"role": "system", "content": summary}]
             else:
                 conversation_history = [{"role": "system", "content": summary}]
-
-        if not self._guardrails.check_query(query.question):
-            total_time = (time.time() - total_start) * 1000
-            return KnowledgeAnswer(
-                question=query.question,
-                answer="I couldn't process that request.",
-                processing_time_ms=total_time,
-                guardrail_triggered=True,
-                conversation_id=query.conversation_id,
-                intent={"type": intent_result.intent.value, "confidence": intent_result.confidence},
-            )
 
         should_search = self._intent_router.should_search_documents(intent_result)
         should_search_memory = self._intent_router.should_search_memory(intent_result)
@@ -188,10 +190,11 @@ class ReasoningEngine:
         follow_up_without_new_search = (
             not raw_chunks
             and intent_result.intent == IntentType.FOLLOW_UP
-            and self._last_retrieved_chunks.get(query.conversation_id)
+            and query.conversation_id
+            and self._context_manager.get_last_retrieved_chunks(query.conversation_id)
         )
         if follow_up_without_new_search:
-            raw_chunks = list(self._last_retrieved_chunks[query.conversation_id])
+            raw_chunks = list(self._context_manager.get_last_retrieved_chunks(query.conversation_id))
             logger.debug("Follow-up reusing %d previously retrieved chunks", len(raw_chunks))
 
         if should_search and not raw_chunks and intent_result.intent != IntentType.FOLLOW_UP:
@@ -233,7 +236,8 @@ class ReasoningEngine:
 
             context = self._context_builder.build(filtered_chunks)
             self._citation_manager.track_chunks(context["chunks"])
-            self._last_retrieved_chunks[query.conversation_id] = list(filtered_chunks)
+            if query.conversation_id:
+                self._context_manager.set_last_retrieved_chunks(query.conversation_id, list(filtered_chunks))
             chunks_used = True
 
         memory_context = None

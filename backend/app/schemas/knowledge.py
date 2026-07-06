@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 class KnowledgeChatRequest(BaseModel):
     question: str = Field(..., min_length=1, description="User question")
     workspace_id: str = Field("default", description="Workspace scope")
+    user_id: str = Field("default", description="User ID for personalisation and settings")
     conversation_id: str = Field("", description="Conversation ID for history tracking")
     top_k: int = Field(10, ge=1, le=50, description="Number of chunks to retrieve")
     min_score: float = Field(0.0, ge=0.0, le=1.0, description="Minimum similarity threshold")
@@ -40,3 +41,5 @@ class KnowledgeHealthResponse(BaseModel):
     allow_external_knowledge: bool = False
     conversation_history_limit: int = 0
     active_conversations: int = 0
+    active_contexts: int = 0
+    active_windows: int = 0

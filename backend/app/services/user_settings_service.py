@@ -1,7 +1,7 @@
 import json
 import os
 from typing import Optional
-from ..models.user_settings import UserAISettings
+from ..schemas.user_settings import UserAISettings
 
 
 class UserSettingsService:

@@ -33,6 +33,7 @@ async def knowledge_chat_endpoint(request: KnowledgeChatRequest):
     knowledge_query = KnowledgeQuery(
         question=question,
         workspace_id=request.workspace_id,
+        user_id=request.user_id,
         conversation_id=request.conversation_id,
         top_k=request.top_k,
         min_score=request.min_score,
@@ -69,6 +70,7 @@ async def knowledge_chat_stream(request: KnowledgeChatRequest):
     knowledge_query = KnowledgeQuery(
         question=question,
         workspace_id=request.workspace_id,
+        user_id=request.user_id,
         conversation_id=request.conversation_id,
         top_k=request.top_k,
         min_score=request.min_score,
@@ -82,6 +84,7 @@ async def knowledge_chat_stream(request: KnowledgeChatRequest):
 
     async def event_stream() -> AsyncGenerator[str, None]:
         intent = None
+        intent_info = None
         search_docs = False
         search_mem = False
         answer_text = ""
@@ -93,23 +96,15 @@ async def knowledge_chat_stream(request: KnowledgeChatRequest):
             result = reasoning_engine.answer(knowledge_query)
 
             if result.intent:
-                intent = result.intent.get("type", "general_ai")
                 intent_info = result.intent
-
-            if intent_info:
                 intent = intent_info.get("type", "general_ai")
                 search_docs = intent in ("document_question", "mixed")
                 search_mem = intent in ("personal_memory", "mixed")
 
-            stages = [
+            stages = streaming_service.generate_stages(intent or "general_ai", search_docs, search_mem) if streaming_service else [
                 {"stage": "thinking", "label": "Thinking..."},
+                {"stage": "writing", "label": "Writing response..."},
             ]
-            if search_docs:
-                stages.append({"stage": "searching_documents", "label": "Searching documents..."})
-            if search_mem:
-                stages.append({"stage": "searching_memories", "label": "Searching memories..."})
-            stages.append({"stage": "writing", "label": "Writing response..."})
-
             for s in stages:
                 yield stage_event(s["stage"], s["label"])
 

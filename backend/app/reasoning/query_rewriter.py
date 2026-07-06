@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from typing import List, Optional, Any
 
 from .answer_models import ConversationTurn
+from .router.intent_models import IntentResult, IntentType
 from ..services.chat_service import ChatService
 
 logger = logging.getLogger(__name__)
@@ -54,7 +55,7 @@ class QueryRewriter:
         # Otherwise, assume it's a good enough query
         return False
 
-    def rewrite(self, query: str, last_question: str = "", last_answer: str = "", current_topic: str = "") -> RewriteResult:
+    def rewrite(self, query: str, intent: IntentResult, last_question: str = "", last_answer: str = "", current_topic: str = "") -> RewriteResult:
         if not self.should_rewrite(query):
             return RewriteResult(
                 original_query=query,
@@ -64,7 +65,7 @@ class QueryRewriter:
                 reason="Query is already clean"
             )
 
-        prompt = self._build_prompt(query, last_question, last_answer, current_topic)
+        prompt = self._build_prompt(query, intent, last_question, last_answer, current_topic)
         
         try:
             llm_response = self._chat_service.invoke_llm(prompt)
@@ -112,11 +113,21 @@ class QueryRewriter:
                 reason=f"Error: {str(e)}"
             )
 
-    def _build_prompt(self, query: str, last_question: str, last_answer: str, current_topic: str) -> str:
+    def _build_prompt(self, query: str, intent: IntentResult, last_question: str, last_answer: str, current_topic: str) -> str:
         topic_text = current_topic if current_topic else "Unknown"
         history_text = "None"
         if last_question or last_answer:
             history_text = f"User: {last_question}\nAssistant: {last_answer}"
+
+        intent_instruction = ""
+        if intent.intent in (IntentType.PERSONAL_MEMORY, IntentType.GREETING):
+            intent_instruction = "• APPLY MINIMAL NORMALIZATION. strictly avoid injecting the active topic into the rewritten query. Never anchor meta-questions to the active topic."
+        elif intent.intent == IntentType.DOCUMENT_QUESTION:
+            intent_instruction = "• Anchor the query to the attached documents or the topic."
+        elif intent.intent == IntentType.FOLLOW_UP:
+            intent_instruction = "• Rewrite as a natural continuation of the active topic, but DO NOT rewrite into an absolute standalone question that sounds like a fresh topic. Keep it contextual."
+        else:
+            intent_instruction = "• Use the active conversation topic and immediate context to rewrite follow-ups into standalone queries."
 
         return f"""You are HearMe AI's Query Rewriter.
 Your ONLY task is rewriting the user's latest query.
@@ -130,7 +141,7 @@ Rules:
 • Correct grammar.
 • Correct punctuation.
 • Expand abbreviations.
-• Use the active conversation topic and immediate context to rewrite follow-ups into standalone queries.
+{intent_instruction}
 • Do not include unrelated past topics. Focus ONLY on the active conversation context.
 • Preserve meaning exactly.
 • Return ONLY a valid JSON object.

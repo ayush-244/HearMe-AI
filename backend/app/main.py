@@ -8,6 +8,7 @@ from .api.search_routes import router as search_router
 from .api.knowledge_routes import router as knowledge_router
 from .api.memory_routes import router as memory_router
 from .api.conversation_routes import router as conversation_router
+from .api.user_settings_routes import router as user_settings_router
 from .services import init_services
 
 logging.basicConfig(level=logging.INFO)
@@ -44,4 +45,4 @@ app.include_router(search_router, prefix="/api/v1")
 app.include_router(knowledge_router, prefix="/api/v1")
 app.include_router(memory_router, prefix="/api/v1")
 app.include_router(conversation_router, prefix="/api/v1")
-app.include_router(user_settings_routes.router)
+app.include_router(user_settings_router, prefix="/api/v1")

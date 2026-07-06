@@ -95,6 +95,9 @@ class PromptBuilder:
         if history_block:
             sections.append("--- Conversation History ---\n" + history_block)
 
+        if intent.intent == IntentType.FOLLOW_UP:
+            sections.append("[Follow-Up Instruction]\nThe user is asking a follow-up question.\nContinue your previous explanation.\nAvoid repeating information already explained unless necessary.\nFocus on expanding the answer with new information.\nDo NOT restart the explanation from the beginning.")
+
         sections.append("--- User Question ---\n" + question.strip())
 
         full_prompt = "\n\n".join(sections)
