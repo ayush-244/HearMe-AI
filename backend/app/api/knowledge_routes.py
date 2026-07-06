@@ -120,12 +120,17 @@ async def knowledge_chat_stream(request: KnowledgeChatRequest):
 
             if not result.answer:
                 yield token_event(result.answer or "")
-                yield done_event({
+                final_payload_empty = {
                     "answer": result.answer or "",
                     "chunk_count": result.chunk_count,
                     "knowledge_gap": result.knowledge_gap,
                     "guardrail_triggered": result.guardrail_triggered,
-                })
+                }
+                if result.retrieval_trace:
+                    final_payload_empty["retrieval_trace"] = {
+                        k: v for k, v in result.retrieval_trace.__dict__.items() if v is not None
+                    }
+                yield done_event(final_payload_empty)
                 return
 
             answer_text = result.answer
@@ -138,7 +143,7 @@ async def knowledge_chat_stream(request: KnowledgeChatRequest):
             if citations:
                 yield citation_event(citations, sources)
 
-            yield done_event({
+            final_payload = {
                 "answer": answer_text,
                 "chunk_count": result.chunk_count,
                 "context_token_estimate": result.context_token_estimate,
@@ -149,7 +154,12 @@ async def knowledge_chat_stream(request: KnowledgeChatRequest):
                 "retrieval_time_ms": result.retrieval_time_ms,
                 "generation_time_ms": result.generation_time_ms,
                 "processing_time_ms": result.processing_time_ms,
-            })
+            }
+            if result.retrieval_trace:
+                final_payload["retrieval_trace"] = {
+                    k: v for k, v in result.retrieval_trace.__dict__.items() if v is not None
+                }
+            yield done_event(final_payload)
 
         except Exception as e:
             logger.error("Streaming error: %s", e, exc_info=True)

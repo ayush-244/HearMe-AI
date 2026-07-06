@@ -25,6 +25,17 @@ class KnowledgeChunk:
 
 
 @dataclass
+class RetrievalTrace:
+    intent: Optional[str] = None
+    memories: Optional[List[Dict[str, Any]]] = None
+    documents: Optional[List[Dict[str, Any]]] = None
+    chunks: Optional[List[Dict[str, Any]]] = None
+    memory_count: int = 0
+    document_count: int = 0
+    chunk_count: int = 0
+
+
+@dataclass
 class KnowledgeQuery:
     question: str
     workspace_id: str = "default"
@@ -54,6 +65,7 @@ class KnowledgeAnswer:
     knowledge_gap: bool = False
     conversation_id: str = ""
     intent: Optional[Dict[str, Any]] = None
+    retrieval_trace: Optional[RetrievalTrace] = None
 
     def to_dict(self) -> Dict[str, Any]:
         result = {
@@ -73,4 +85,8 @@ class KnowledgeAnswer:
         }
         if self.intent:
             result["intent"] = self.intent
+        if self.retrieval_trace:
+            result["retrieval_trace"] = {
+                k: v for k, v in self.retrieval_trace.__dict__.items() if v is not None
+            }
         return result

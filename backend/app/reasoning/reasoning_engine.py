@@ -12,7 +12,7 @@ from .prompt_builder import PromptBuilder
 from .citation_manager import CitationManager
 from .response_validator import ResponseValidator
 from .guardrails import Guardrails
-from .answer_models import KnowledgeQuery, KnowledgeAnswer, ConversationTurn
+from .answer_models import KnowledgeQuery, KnowledgeAnswer, ConversationTurn, RetrievalTrace
 from .router.intent_router import IntentRouter, SIMILARITY_THRESHOLD
 from .router.intent_models import IntentResult, IntentType
 from .conversation.conversation_context import ConversationContextManager
@@ -333,6 +333,50 @@ class ReasoningEngine:
             len(citations), knowledge_gap, guardrail_triggered,
         )
 
+        retrieval_trace = None
+        has_chunks = bool(context and context.get("chunks"))
+        has_memories = bool(memory_context)
+
+        if has_chunks or has_memories:
+            retrieval_trace = RetrievalTrace(
+                intent=intent_result.intent.value if intent_result else None
+            )
+            
+            if has_memories:
+                retrieval_trace.memories = []
+                for m in memory_context:
+                    m_id = m.get("memory_id") if isinstance(m, dict) else getattr(m, "memory_id", "")
+                    m_type = m.get("type", "episodic") if isinstance(m, dict) else getattr(m, "type", "episodic")
+                    m_title = m.get("summary", "") if isinstance(m, dict) else getattr(m, "summary", "")
+                    retrieval_trace.memories.append({
+                        "id": m_id,
+                        "type": m_type,
+                        "title": m_title[:100] if m_title else ""
+                    })
+                retrieval_trace.memory_count = len(retrieval_trace.memories)
+                    
+            if has_chunks:
+                retrieval_trace.chunks = []
+                trace_docs_map = {}
+                for c in context["chunks"]:
+                    doc_id = c.get("document_id")
+                    title = c.get("title", "")
+                    if doc_id and doc_id not in trace_docs_map:
+                        trace_docs_map[doc_id] = {
+                            "id": doc_id,
+                            "source": title,
+                            "title": title
+                        }
+                    retrieval_trace.chunks.append({
+                        "source": title,
+                        "page": c.get("page", 0),
+                        "chunk_index": c.get("chunk_index", 0)
+                    })
+                if trace_docs_map:
+                    retrieval_trace.documents = list(trace_docs_map.values())
+                    retrieval_trace.document_count = len(retrieval_trace.documents)
+                retrieval_trace.chunk_count = len(retrieval_trace.chunks)
+
         return KnowledgeAnswer(
             question=query.question,
             answer=answer_text,
@@ -348,6 +392,7 @@ class ReasoningEngine:
             knowledge_gap=knowledge_gap,
             conversation_id=query.conversation_id,
             intent={"type": intent_result.intent.value, "confidence": intent_result.confidence},
+            retrieval_trace=retrieval_trace,
         )
 
     def _get_conversation_history(self, conversation_id: str) -> Optional[List[Dict[str, str]]]:

@@ -28,6 +28,7 @@ class KnowledgeChatResponse(BaseModel):
     guardrail_triggered: bool = False
     knowledge_gap: bool = False
     conversation_id: str = ""
+    retrieval_trace: Optional[Dict[str, Any]] = None
 
 
 class KnowledgeHealthResponse(BaseModel):
