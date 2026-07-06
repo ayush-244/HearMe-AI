@@ -126,6 +126,7 @@ function ChatPageInner() {
           citations: m.citations,
           isStreaming: false,
           timestamp: m.timestamp,
+          retrieval_trace: m.retrieval_trace,
         }))
       )
     }
@@ -208,7 +209,7 @@ function ChatPageInner() {
         },
         onDone: async (result) => {
           setStreamMessages((prev) =>
-            prev.map((m) => (m.id === msgId ? { ...m, isStreaming: false, content: result?.answer || m.content, citations: result?.citations || m.citations } : m))
+            prev.map((m) => (m.id === msgId ? { ...m, isStreaming: false, content: result?.answer || m.content, citations: result?.citations || m.citations, retrieval_trace: result?.retrieval_trace } : m))
           )
           try {
             await addMsg.mutateAsync({

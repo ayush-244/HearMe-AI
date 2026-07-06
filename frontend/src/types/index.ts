@@ -1,3 +1,25 @@
+export interface RetrievalTrace {
+  intent?: string
+  memories?: {
+    id: string
+    type: string
+    title: string
+  }[]
+  documents?: {
+    id: string
+    source: string
+    title: string
+  }[]
+  chunks?: {
+    source: string
+    page: number
+    chunk_index: number
+  }[]
+  memory_count?: number
+  document_count?: number
+  chunk_count?: number
+}
+
 export interface ChatMessage {
   id: string
   role: "user" | "assistant"
@@ -5,6 +27,7 @@ export interface ChatMessage {
   citations?: string[]
   sources?: Source[]
   timestamp: string
+  retrieval_trace?: RetrievalTrace | null
 }
 
 export interface Source {
@@ -39,6 +62,7 @@ export interface KnowledgeResponse {
   guardrail_triggered: boolean
   knowledge_gap: boolean
   conversation_id: string
+  retrieval_trace?: RetrievalTrace | null
 }
 
 export interface SearchQuery {
@@ -199,6 +223,7 @@ export interface StreamEvent {
     retrieval_time_ms?: number
     generation_time_ms?: number
     error?: string
+    retrieval_trace?: RetrievalTrace | null
   }
   citations?: string[]
   sources?: Source[]

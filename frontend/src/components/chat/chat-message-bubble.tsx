@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { StreamingCursor } from "@/components/chat/streaming-cursor"
 import { ChatMarkdown } from "@/components/chat/chat-markdown"
 import { MessageToolbar } from "@/components/chat/message-toolbar"
+import { ContextStrip } from "@/components/chat/context-strip"
 import { cn, formatMessageTime } from "@/lib/utils"
 import { MOTION, TYPOGRAPHY } from "@/lib/design-tokens"
 
@@ -18,6 +19,7 @@ export interface ChatBubbleMessage {
   citations?: string[]
   isStreaming?: boolean
   timestamp?: string
+  retrieval_trace?: any
 }
 
 interface ChatMessageBubbleProps {
@@ -62,7 +64,9 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
             </p>
           </div>
         ) : (
-          <div className="w-full rounded-2xl rounded-bl-md border border-border bg-card px-4 py-3 shadow-sm">
+          <div className="flex flex-col gap-1 w-full">
+            <ContextStrip trace={msg.retrieval_trace} />
+            <div className="w-full rounded-2xl rounded-bl-md border border-border bg-card px-4 py-3 shadow-sm">
             {msg.isStreaming ? (
               <div className={cn(TYPOGRAPHY.body, "leading-relaxed")}>
                 {msg.content ? (
@@ -88,6 +92,7 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
             )}
 
             {!msg.isStreaming && msg.content && <MessageToolbar content={msg.content} />}
+          </div>
           </div>
         )}
 
