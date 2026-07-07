@@ -128,7 +128,21 @@ class IntentClassifier:
         if words & DOCUMENT_QUESTION_WORDS:
             return True, 0.75
 
+        if self._has_semantic_document_reference(q_lower):
+            return True, 0.78
+
         return False, 0.0
+
+    def _has_semantic_document_reference(self, q_lower: str) -> bool:
+        from .intent_rules import SEMANTIC_TERMS_PATTERN, CONTEXTUAL_ANCHOR_PATTERN
+        
+        if not SEMANTIC_TERMS_PATTERN.search(q_lower):
+            return False
+            
+        if CONTEXTUAL_ANCHOR_PATTERN.search(q_lower):
+            return True
+            
+        return False
 
     def _is_mixed(self, q_lower: str, state: ConversationState) -> bool:
         has_memory_ref = any(p.search(q_lower) for p in PERSONAL_MEMORY_PATTERNS)

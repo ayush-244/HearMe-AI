@@ -1,0 +1,15 @@
+[
+  {
+    "id": "c676d9e2-0ce0-43b9-9872-1fa6627f7dec",
+    "conversation_id": "e375c8d6-9591-4448-9d5b-0d05e9bfa234",
+    "role": "assistant",
+    "content": "Based on the retrie...",
+    "citations": [],
+    "timestamp": "2026-07-07T17:14:58.455684",
+    "retrieval_trace": {
+      "intent": "document_question",
+      "documents": [],
+      "chunks": []
+    }
+  }
+]

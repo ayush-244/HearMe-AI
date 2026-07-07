@@ -44,6 +44,7 @@ DOCUMENT_QUESTION_PATTERNS: List[Pattern] = [
     re.compile(r"\b(in\s+this\s+(document|file|paper|article|resume|report))\b", re.IGNORECASE),
     re.compile(r"\baccording\s+to\s+(the|this|my|that)\s+(document|file|paper|resume)\b", re.IGNORECASE),
     re.compile(r"\b(documents?|files?|papers?|resume|articles?)\s+(related|about|regarding|mentioning)\b", re.IGNORECASE),
+    re.compile(r"\b(tell\s+me\s+about\s+(my|this|the|that)\s+(document|file|pdf|resume|paper|article|report))\b", re.IGNORECASE),
 ]
 
 GENERAL_AI_PATTERNS: List[Pattern] = [
@@ -91,3 +92,34 @@ DOCUMENT_QUESTION_WORDS: set = {
     "summarize", "summarise", "compare", "contrast",
     "outline", "highlight", "list", "extract",
 }
+
+SEMANTIC_DOCUMENT_DOMAINS = {
+    "resume": [
+        "work experience", "experience", "internship", "employment",
+        "projects", "project", "technical skills", "skills",
+        "education", "certifications", "achievements", "summary",
+        "profile", "technologies", "languages", "awards"
+    ],
+    "medical_report": [
+        "diagnosis", "symptoms", "medications", "treatment",
+        "findings", "recommendation", "blood test", "lab values",
+        "mri", "ct", "x-ray", "xray"
+    ],
+    "research_paper": [
+        "abstract", "methodology", "conclusion", "results", "experiments"
+    ],
+    "invoice": [
+        "amount", "total", "gst", "tax", "invoice number"
+    ]
+}
+
+_all_terms = [term for domain in SEMANTIC_DOCUMENT_DOMAINS.values() for term in domain]
+_all_terms.sort(key=len, reverse=True)
+_terms_regex = r"\b(" + "|".join(re.escape(t) for t in _all_terms) + r")\b"
+
+SEMANTIC_TERMS_PATTERN = re.compile(_terms_regex, re.IGNORECASE)
+
+CONTEXTUAL_ANCHOR_PATTERN = re.compile(
+    r"\b(my|the|this|these|i have|i'?ve|listed|mentioned|shown)\b", 
+    re.IGNORECASE
+)

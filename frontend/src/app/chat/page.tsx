@@ -188,6 +188,7 @@ function ChatPageInner() {
           role: "assistant",
           content: result.answer,
           citations: result.citations,
+          retrieval_trace: result.retrieval_trace,
         })
         api.extractMemory({ user_text: text, assistant_text: result.answer })
           .then(() => queryClient.invalidateQueries({ queryKey: ["memories"] }))
@@ -241,12 +242,15 @@ function ChatPageInner() {
             prev.map((m) => (m.id === msgId ? { ...m, isStreaming: false, content: result?.answer || m.content, citations: result?.citations || m.citations, retrieval_trace: result?.retrieval_trace } : m))
           )
           try {
-            const saved = await addMsg.mutateAsync({
+            const reqBody = {
               convId: cid,
               role: "assistant",
               content: result?.answer || "",
               citations: result?.citations,
-            })
+              retrieval_trace: result?.retrieval_trace,
+            }
+            console.log("[1] FRONTEND REQUEST", { retrieval_trace: result?.retrieval_trace, reqBody })
+            const saved = await addMsg.mutateAsync(reqBody)
             // Promote stream message to server identity so the
             // dbMessages sync effect matches by id deterministically
             setStreamMessages((prev) =>

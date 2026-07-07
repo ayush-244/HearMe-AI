@@ -1,0 +1,21 @@
+[
+  {
+    "id": "04a4a84c-0253-49bd-b406-4db24243f213",
+    "conversation_id": "f0e34147-3717-431c-9a09-9da5047a37d9",
+    "role": "assistant",
+    "content": "Here is your resume summary.",
+    "citations": [],
+    "timestamp": "2026-07-07T16:58:21.915674",
+    "retrieval_trace": {
+      "intent": "document_question",
+      "documents": [
+        {
+          "id": "doc1",
+          "source": "resume.pdf",
+          "title": "Resume"
+        }
+      ],
+      "chunks": []
+    }
+  }
+]

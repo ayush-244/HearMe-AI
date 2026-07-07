@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { api } from "@/services/api-client"
+import type { RetrievalTrace } from "@/types"
 
 export function useConversations(search?: string) {
   return useQuery({
@@ -51,8 +52,8 @@ export function useDeleteConversation() {
 export function useAddMessage() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ convId, role, content, citations }: { convId: string; role: string; content: string; citations?: string[] }) =>
-      api.addMessage(convId, role, content, citations),
+    mutationFn: ({ convId, role, content, citations, retrieval_trace }: { convId: string; role: string; content: string; citations?: string[]; retrieval_trace?: RetrievalTrace | null }) =>
+      api.addMessage(convId, role, content, citations, retrieval_trace),
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["conversation", data.conversation_id] })
       qc.invalidateQueries({ queryKey: ["conversations"] })

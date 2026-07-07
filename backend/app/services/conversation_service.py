@@ -87,6 +87,9 @@ class ConversationService:
         if not conv:
             return None
         messages = self._load_messages(conv_id)
+        for m in messages:
+            if m.get("role") == "assistant":
+                logger.info("[6] GET RESPONSE msg_id=%s retrieval_trace=%s", m.get("id"), m.get("retrieval_trace") is not None)
         return {
             **conv,
             "messages": messages,
@@ -125,7 +128,7 @@ class ConversationService:
             os.remove(path)
         return True
 
-    def add_message(self, conv_id: str, role: str, content: str, citations: list[str] = None) -> Optional[dict]:
+    def add_message(self, conv_id: str, role: str, content: str, citations: list[str] = None, retrieval_trace: dict = None) -> Optional[dict]:
         if conv_id not in self._conversations:
             conv = self.create_conversation()
             conv_id = conv["id"]
@@ -139,8 +142,16 @@ class ConversationService:
             "citations": citations or [],
             "timestamp": datetime.utcnow().isoformat(),
         }
+        if role == "assistant" and retrieval_trace is not None:
+            msg["retrieval_trace"] = retrieval_trace
+        logger.info("[4] SERVICE role=%s retrieval_trace_param=%s msg_has_trace=%s", role, retrieval_trace is not None, "retrieval_trace" in msg)
         messages.append(msg)
         self._save_messages(conv_id, messages)
+        # [5] Read back file to verify physical persistence
+        readback = self._load_messages(conv_id)
+        if readback:
+            last = readback[-1]
+            logger.info("[5] FILE readback msg_id=%s has_retrieval_trace=%s", last.get("id"), "retrieval_trace" in last)
         conv["updated_at"] = msg["timestamp"]
         if role == "user" and "title" in conv and conv["title"] == "New Chat":
             conv["title"] = self._generate_title(content)

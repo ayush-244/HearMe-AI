@@ -24,6 +24,7 @@ class MessageResponse(BaseModel):
     content: str
     citations: list[str] = []
     timestamp: str
+    retrieval_trace: Optional[dict] = None
 
 
 class ConversationCreate(BaseModel):

@@ -1,0 +1,15 @@
+[
+  {
+    "id": "2907cf97-eda1-4634-8903-6f3cb943108b",
+    "conversation_id": "ef58bcb7-89b5-4737-ae35-d1ab2a84dc8f",
+    "role": "assistant",
+    "content": "test",
+    "citations": [],
+    "timestamp": "2026-07-07T17:17:50.329405",
+    "retrieval_trace": {
+      "intent": "test",
+      "documents": [],
+      "chunks": []
+    }
+  }
+]

@@ -1,0 +1,18 @@
+[
+  {
+    "id": "8d9b8614-39f7-401e-9326-5d10875c3a23",
+    "conversation_id": "ee51f0ee-53a7-4de5-9cd7-2dd691ecbba4",
+    "role": "user",
+    "content": "tell me about my work experince",
+    "citations": [],
+    "timestamp": "2026-07-07T17:36:14.938794"
+  },
+  {
+    "id": "2a88a92d-ab6f-4ebb-87cf-40963edc187c",
+    "conversation_id": "ee51f0ee-53a7-4de5-9cd7-2dd691ecbba4",
+    "role": "assistant",
+    "content": "I don't have any information about your work experience. I'm a large language model, I don't have personal access to your data or history. Each time you interact with me, it's a new conversation, and I don't retain any information from previous conversations.\n\nHowever, I can help you reflect on your work experience or provide guidance on how to write about it. If you'd like, you can share some details about your work experience, such as:\n\n* The jobs you've held\n* The industries you've worked in\n* The skills you've developed\n* The accomplishments you're proud of\n\nI can then help you organize your thoughts and provide suggestions on how to effectively communicate your work experience to others, such as in a resume, cover letter, or interview. Would you like to share some details about your work experience?",
+    "citations": [],
+    "timestamp": "2026-07-07T17:36:15.720213"
+  }
+]

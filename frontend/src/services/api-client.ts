@@ -12,6 +12,7 @@ import type {
   MemoryExtractResponse,
   MemorySearchResponse,
   MessageResponse,
+  RetrievalTrace,
   SearchQuery,
   StreamEvent,
   SearchResponse,
@@ -53,11 +54,14 @@ export const api = {
   deleteConversation: (id: string) =>
     request<{ deleted: boolean }>(`/conversations/${id}`, { method: "DELETE" }),
 
-  addMessage: (convId: string, role: string, content: string, citations: string[] = []) =>
-    request<MessageResponse>(`/conversations/${convId}/messages`, {
+  addMessage: (convId: string, role: string, content: string, citations: string[] = [], retrieval_trace?: RetrievalTrace | null) => {
+    const body = JSON.stringify({ role, content, citations, retrieval_trace })
+    console.log("[2] HTTP BODY", { retrieval_trace, bodySnippet: body.slice(0, 500) })
+    return request<MessageResponse>(`/conversations/${convId}/messages`, {
       method: "POST",
-      body: JSON.stringify({ role, content, citations }),
-    }),
+      body,
+    })
+  },
 
   getMessages: (convId: string, limit = 100) =>
     request<{ messages: ChatMessage[]; total: number }>(`/conversations/${convId}/messages?limit=${limit}`),

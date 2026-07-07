@@ -204,6 +204,7 @@ export interface MessageResponse {
   content: string
   citations: string[]
   timestamp: string
+  retrieval_trace?: RetrievalTrace | null
 }
 
 export interface StreamEvent {

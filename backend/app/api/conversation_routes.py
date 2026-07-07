@@ -79,9 +79,11 @@ async def add_message(conv_id: str, body: dict):
     role = body.get("role", "user")
     content = body.get("content", "")
     citations = body.get("citations", [])
+    retrieval_trace = body.get("retrieval_trace")
+    logger.info("[3] ROUTE body keys=%s retrieval_trace=%s", list(body.keys()), retrieval_trace is not None)
     if not content:
         raise HTTPException(status_code=400, detail="Content is required")
-    msg = service.add_message(conv_id, role, content, citations)
+    msg = service.add_message(conv_id, role, content, citations, retrieval_trace=retrieval_trace)
     if not msg:
         raise HTTPException(status_code=404, detail="Conversation not found")
     return msg
