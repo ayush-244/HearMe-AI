@@ -1,0 +1,18 @@
+[
+  {
+    "id": "3eab2ff3-3c19-47dd-affe-ae09bbd51d21",
+    "conversation_id": "31a38fad-fa9e-4abc-9777-26e686c57016",
+    "role": "user",
+    "content": "Summarize my resume",
+    "citations": [],
+    "timestamp": "2026-07-07T16:45:45.446190"
+  },
+  {
+    "id": "16b08802-7222-4562-9bf2-0106f0ddcb36",
+    "conversation_id": "31a38fad-fa9e-4abc-9777-26e686c57016",
+    "role": "assistant",
+    "content": "Based on the provided document chunks, here is a summary of your resume [Source 1]: \nYou are a B.Tech CSE student with strong foundations in Data Structures, Algorithms, and Object-Oriented Programming, experienced in building scalable full-stack applications and backend systems. \n\nYour work experience includes a Summer Research Intern position at SRM University-AP, where you built an end-to-end ML system using Gradient Boosting to predict credit scores [Source 2]. You also have experience as a Core Team Member at Google Developer Groups (GDG), where you tracked registration data and increased participant engagement [Source 2].\n\nIn terms of technical skills, you are proficient in programming languages such as Python, JavaScript, C, C++, and Java [Source 3]. You also have experience with web technologies like React.js, Node.js, and Express.js, as well as databases like MongoDB and MySQL [Source 3].\n\nAdditionally, you have certifications in Oracle Cloud Infrastructure 2025 Certified Data Science Professional, Oracle Certified Professional: Java SE 17 Developer, and MongoDB Certified Associate Developer (Node.js) [Source 4].\n\nPlease note that the provided information does not include a comprehensive summary of your entire resume, as some sections may be missing. However, based on the available document chunks, this summary highlights your key strengths, work experience, and technical skills.",
+    "citations": [],
+    "timestamp": "2026-07-07T16:45:49.014859"
+  }
+]

@@ -241,12 +241,28 @@ function ChatPageInner() {
             prev.map((m) => (m.id === msgId ? { ...m, isStreaming: false, content: result?.answer || m.content, citations: result?.citations || m.citations, retrieval_trace: result?.retrieval_trace } : m))
           )
           try {
-            await addMsg.mutateAsync({
+            const saved = await addMsg.mutateAsync({
               convId: cid,
               role: "assistant",
               content: result?.answer || "",
               citations: result?.citations,
             })
+            // Promote stream message to server identity so the
+            // dbMessages sync effect matches by id deterministically
+            setStreamMessages((prev) =>
+              prev.map((m) =>
+                m.id === msgId
+                  ? {
+                      ...m,
+                      id: saved.id,
+                      timestamp: saved.timestamp,
+                      citations: saved.citations ?? m.citations,
+                      retrieval_trace: m.retrieval_trace ?? result?.retrieval_trace,
+                      isStreaming: false,
+                    }
+                  : m
+              )
+            )
             api.extractMemory({ user_text: text, assistant_text: result?.answer || "" })
               .then(() => queryClient.invalidateQueries({ queryKey: ["memories"] }))
               .catch(() => { })

@@ -1,0 +1,34 @@
+[
+  {
+    "id": "3a39d432-2983-418f-928b-3de2a347a83a",
+    "conversation_id": "b5d3d8ba-dbdd-4630-ad70-8a5770a80316",
+    "role": "user",
+    "content": "Summarize my resume",
+    "citations": [],
+    "timestamp": "2026-07-07T16:42:44.612312"
+  },
+  {
+    "id": "b628640e-7273-42ac-acc7-62c71409ceb0",
+    "conversation_id": "b5d3d8ba-dbdd-4630-ad70-8a5770a80316",
+    "role": "assistant",
+    "content": "Based on the retrieved knowledge, here is a summary of your resume [Source 1]: You are a B.Tech CSE student with strong foundations in Data Structures, Algorithms, and Object-Oriented Programming, experienced in building scalable full-stack applications and backend systems. You are passionate about solving real-world problems using technology and interested in applying software engineering in financial services and large-scale systems.\n\nYour work experience [Source 2] includes a Summer Research Intern position at SRM University-AP, where you built an end-to-end ML system using Gradient Boosting to predict credit scores, and a Core Team Member position at Google Developer Groups (GDG), where you tracked registration data and increased participant engagement.\n\nYou have proficiency in various programming languages [Source 3], including Python, JavaScript, C, C++, and Java, as well as experience with web technologies, backend and APIs, databases, machine learning, and data science.\n\nAdditionally, you have obtained several certifications [Source 4], including Oracle Cloud Infrastructure 2025 Certified Data Science Professional, Oracle Certified Professional: Java SE 17 Developer, and MongoDB Certified Associate Developer (Node.js).\n\nNote that [Source 5] appears to be a medical report and is not relevant to your resume summary.",
+    "citations": [],
+    "timestamp": "2026-07-07T16:43:03.028490"
+  },
+  {
+    "id": "b336127b-5d62-45ae-8e6f-d6097e2e1d6a",
+    "conversation_id": "b5d3d8ba-dbdd-4630-ad70-8a5770a80316",
+    "role": "user",
+    "content": "Tell me more about my projects",
+    "citations": [],
+    "timestamp": "2026-07-07T16:43:33.100631"
+  },
+  {
+    "id": "5b890fc4-d0c4-453e-8934-67d466032433",
+    "conversation_id": "b5d3d8ba-dbdd-4630-ad70-8a5770a80316",
+    "role": "assistant",
+    "content": "Based on the retrieved knowledge [Source 2], you have worked on several projects, including:\n\n1. Crop Disease Classification: You built a production-ready CNN (MobileNetV2) that achieved 96.5% accuracy across 38 disease classes. You also deployed a Flask API with a 1.2-second inference time, which was tested on 500+ sample images by users. This project reduced diagnosis time from 2-3 days to under 2 seconds.\n\n2. AI-Based Peer Behavior Similarity Detector: You built an AI-powered anomaly detection system that analyzed 8,000+ user records with 92% precision. You designed a composite scoring system with 6 similarity metrics, which improved the detection rate by 18%. You also created an interactive Streamlit dashboard used by 15+ peers, reducing analysis time from 2 hours to 10 minutes.\n\n3. Collaborative Class \u2013 Academic Collaboration Platform: You built a full-stack role-based platform (React.js + Node.js + MongoDB) that supported 200+ active users. You developed real-time notifications using Socket.IO and analytics dashboards that tracked 10+ metrics. This project reduced assignment monitoring time by 50% through automated workflows.\n\nThese projects demonstrate your experience in building scalable full-stack applications, working with machine learning and data science, and developing backend systems. They also highlight your ability to solve real-world problems using technology and your interest in applying software engineering in various domains.",
+    "citations": [],
+    "timestamp": "2026-07-07T16:43:36.420977"
+  }
+]
