@@ -2,8 +2,6 @@
 
 A production-ready AI-powered platform with multilingual sentiment-aware chatbot, knowledge reasoning (RAG), document intelligence, long-term personal memory, and a modern Next.js frontend.
 
-
-
 ## Features
 
 - **Sentiment Analysis**: Real-time emotional tone detection (Positive/Neutral/Negative)
