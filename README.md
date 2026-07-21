@@ -124,6 +124,7 @@ A production-ready AI-powered platform with multilingual sentiment-aware chatbot
    streamlit run app.py
    ```
 
+
 ## Technology Stack
 
 | Component | Technology |
